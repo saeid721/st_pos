@@ -1,0 +1,113 @@
+import React, { useState } from 'react';
+import TextInput from '../TextInput/TextInput';
+
+const LanguageWiseInputBox = ({
+    name,
+    name_bn,
+    name_hi,
+    name_ar,
+    register,
+    errors
+}) => {
+
+    const [selectedSiteLanguage, setSelectedSiteLanguage] = useState("english");
+
+    const handleChange = (event) => {
+        setSelectedSiteLanguage(event.target.value);
+    };
+
+    const getLabelWithLanguage = (baseLabel, language) => `${baseLabel.toUpperCase()} (${language})`;
+    const getPlaceholderWithLanguage = (baseLabel, language) => `Enter ${baseLabel.toUpperCase()} (${language})`;
+
+    return (
+        <div>
+            <div className="w-64 mx-auto mb-5">
+                <label
+                    htmlFor="language"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                    Select Language
+                </label>
+                <div className="relative">
+                    <select
+                        id="language"
+                        name="language"
+                        value={selectedSiteLanguage}
+                        onChange={handleChange}
+                        className="block appearance-none w-full bg-white shadow-sm shadow-blue-500 text-gray-700 py-3 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    >
+                        <option value="english">English</option>
+                        <option value="bangla">Bangla</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="arabic">Arabic</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg
+                            className="fill-current h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                        >
+                            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                {selectedSiteLanguage === "english" && (
+                    <TextInput
+                        name={name}
+                        label={getLabelWithLanguage(name, "English")}
+                        type="text"
+                        register={register}
+                        error={errors.name}
+                        placeholder={getPlaceholderWithLanguage(name, "English")}
+                        isHighlight={true}
+                        required={true}
+                    />
+                )}
+
+                {selectedSiteLanguage === "bangla" && (
+                    <TextInput
+                        name={name_bn}
+                        label={getLabelWithLanguage(name, "Bangla")}
+                        type="text"
+                        register={register}
+                        error={errors.name_bn}
+                        placeholder={getPlaceholderWithLanguage(name, "Bangla")}
+                        required={false}
+                        isHighlight={true}
+                    />
+                )}
+
+                {selectedSiteLanguage === "hindi" && (
+                    <TextInput
+                        name={name_hi}
+                        label={getLabelWithLanguage(name, "Hindi")}
+                        type="text"
+                        register={register}
+                        error={errors.name_hi}
+                        placeholder={getPlaceholderWithLanguage(name, "Hindi")}
+                        required={false}
+                        isHighlight={true}
+                    />
+                )}
+
+                {selectedSiteLanguage === "arabic" && (
+                    <TextInput
+                        name={name_ar}
+                        label={getLabelWithLanguage(name, "Arabic")}
+                        type="text"
+                        register={register}
+                        error={errors.name_ar}
+                        placeholder={getPlaceholderWithLanguage(name, "Arabic")}
+                        required={false}
+                        isHighlight={true}
+                    />
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default LanguageWiseInputBox;

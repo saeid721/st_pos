@@ -1,0 +1,133 @@
+import React, { useEffect, useMemo, useState } from "react";
+
+import CustomPaginationTable from "../../Shared/Tables/CustomPaginationTable";
+import useDelete from "../../Shared/Constant/hooks/useDelete";
+import { Loader } from "lucide-react";
+import { useSelector } from "react-redux";
+import { useGetInvoiceReturnsByPaginationQuery } from "../../../store/api/app/InvoiceReturn/invoiceReturnApiSlice";
+import InvoiceReturnView from "./InvoiceReturnView";
+
+const InvoiceReturn = () => {
+  const [selectedData, setSelectedData] = useState(null);
+  const [paginationPage, setPaginationPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [order, setOrder] = useState("desc");
+  const [search, setSearch] = useState("");
+
+  const { isAuth, auth } = useSelector((state) => state.auth);
+  const { store_id } = auth.user;
+
+  console.log("auth", auth);
+
+  const { data, isLoading, isError, error } = useGetInvoiceReturnsByPaginationQuery({
+    page: paginationPage,
+    limit: limit,
+    order: order,
+    search: search,
+    store_id: store_id,
+  });
+
+  console.log("data::::", data);
+  const { handleDelete } = useDelete();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleView = (rowData) => {
+    setSelectedData(rowData);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        Header: "Return No",
+        accessor: "return_no",
+      },
+      {
+        Header: "Invoice No",
+        accessor: "invoice.invoice_no",
+      },
+      {
+        Header: "Client",
+        accessor: "invoice.client.name",
+      },
+      {
+        Header: "Return Reason",
+        accessor: "reason",
+      },
+      {
+        Header: "Cost of Return Products",
+        accessor: "invoice_sub_total_for_return_price",
+        Cell: ({ value }) => value ? parseFloat(value).toFixed(2) : "0.00"
+      },
+      {
+        Header: "Date",
+        accessor: "date",
+        Cell: ({ value }) => {
+          // Format the date
+          return new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(value));
+        },
+      },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    if (data?.data?.pagination) {
+      setPageCount(data?.data?.pagination?.total_page);
+    }
+  }, [data]);
+
+  const handleLimitChange = (newLimit) => {
+    setLimit(newLimit);
+  };
+
+  const handleSearch = (value) => {
+    setSearch(value);
+  };
+
+  return (
+    <div>
+      {isLoading && <Loader />}
+      {isError && <p>Error: {error.message}</p>}
+      {!isLoading && !isError && data && (
+        <CustomPaginationTable
+          limit={limit}
+          onLimitChange={handleLimitChange}
+          columns={columns}
+          data={data?.data?.result}
+          sortDirection={order}
+          setSortDirection={setOrder}
+          addNewButton={{
+            label: "Add Invoice Return",
+          }}
+          showViewAction={true}
+          showEditAction={true}
+          showDeleteAction={true}
+          handleView={handleView}
+          handleEdit={() => { }}
+          handleDelete={handleDelete}
+          editPath="/store/dashboard/invoice-returns"
+          paginationPage={paginationPage}
+          pageCount={pageCount}
+          onPageChange={(newPage) => setPaginationPage(newPage)}
+          onSearch={handleSearch}
+          path={"INVOICE_RETURNS"}
+        />
+      )}
+
+      {/* <InvoiceReturnView isOpen={isModalOpen} onClose={handleCloseModal} data={selectedData} title="Invoice Return" /> */}
+    </div>
+  );
+};
+
+export default InvoiceReturn;

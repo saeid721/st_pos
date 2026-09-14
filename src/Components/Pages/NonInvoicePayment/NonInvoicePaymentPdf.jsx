@@ -1,0 +1,44 @@
+import React from 'react';
+import ReusablePdfGenerator from '../../Shared/ReusablePdfGenerator/ReusablePdfGenerator';
+import { useGetNonInvoicePaymentsByPaginationQuery } from '../../../store/api/app/NonInvoice/nonInvoiceApiSlice';
+
+const NonInvoicePaymentPdf = ({ setPdfButtonClick, newColumns }) => { 
+    const columns = [
+        ...newColumns,
+        {
+            Header: "Status",
+            accessor: "status",
+            id: "status"
+        }
+    ];
+
+    const { data, isSuccess, isError, error } = useGetNonInvoicePaymentsByPaginationQuery({
+        page: 1,
+        limit: 0,
+        order: 'desc',
+    });
+
+    if (isError) {
+        console.error("PDF error:", error);
+        setPdfButtonClick(false);
+        return null;
+    }
+
+    const transformedData = data?.data?.result?.map(item => ({
+        ...item,
+        type: item.type === 0 ? "Due" : "Payment",
+    }));
+
+
+    return isSuccess && transformedData ? (
+        <ReusablePdfGenerator
+            title="Non Invoice Payment Report"
+            columns={columns}
+            data={transformedData}
+            fileName="non_invoice_payment.pdf"
+            setPdfButtonClick={setPdfButtonClick}
+        />
+    ) : null;
+};
+
+export default NonInvoicePaymentPdf;
