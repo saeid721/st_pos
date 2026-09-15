@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-CF72uaaz.js";import{rt as n}from"./index-BuBZ1uY3.js";import{t as r}from"./FooterForm-DpWVzrCr.js";e();var i=t(),a=()=>{let{footer_type:e}=n();return(0,i.jsx)(`div`,{children:(0,i.jsx)(r,{footer_type:e})})};export{a as default};

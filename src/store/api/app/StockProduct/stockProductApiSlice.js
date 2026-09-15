@@ -24,7 +24,7 @@ export const stockProductsApi = apiSlice.injectEndpoints({
           search
         )}&store_id=${store_id}${category_id ? `&category_id=${category_id}` : ""}${
           sub_category_id ? `&sub_category_id=${sub_category_id}` : ""
-        }`,
+        }${branch_id ? `&branch_id=${branch_id}` : ""}`,
       providesTags: ["stockProducts"],
     }),
 

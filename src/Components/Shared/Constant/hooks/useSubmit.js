@@ -43,6 +43,7 @@ const useSubmit = (id, hook, redirect) => {
 			navigate(redirect ? redirect : -1);
 			reset();
 			toast.success(response?.message);
+			return true;
 		}
 		catch (error) {
 			console.log('Error:', error);
@@ -52,6 +53,7 @@ const useSubmit = (id, hook, redirect) => {
 				error?.message ||
 				'Something went wrong!';
 			toast.error(message);
+			return false;
 		}
 	};
 

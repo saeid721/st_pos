@@ -37,7 +37,7 @@ import ClientCreateModal from "./ClientCreateModal";
 const DEBOUNCE_MS = 400;
 
 const POS = ({ id, data }) => {
-  const { register, control, errors, handleSubmit, onSubmit, watch, reset, isLoading } = useSubmit(
+  const { register, control, errors, handleSubmit, onSubmit, watch, reset, setValue, isLoading } = useSubmit(
     id,
     id ? useUpdateInvoicesMutation : useCreateInvoicesMutation,
     "/store/dashboard/POS"
@@ -45,6 +45,7 @@ const POS = ({ id, data }) => {
   const { data: storeCurrency } = useGetStoreCurrenciesQuery();
 
   const backendUrl = import.meta.env.VITE_LOCAL_API_URL;
+  const currency = storeCurrency?.data?.currency?.symbol || "৳";
   const [tableData, setTableData] = useState([]);
   const [showModalAfterSubmit, setShowModalAfterSubmit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -112,13 +113,10 @@ const POS = ({ id, data }) => {
   const discount = watch("discount");
   const transport = watch("transport");
   const client_id = watch("client_id");
+  const branch_id = watch("branch_id");
   const tax_id = watch("tax_id");
-  const paymentOptions = watch("payment_options");
 
-  const addPaymentOptions = [
-    { value: true, label: "YES" },
-    { value: false, label: "NO" },
-  ];
+  const [withPayment, setWithPayment] = useState(false);
 
   const productsData = stockProduct?.data?.result;
   const paginationData = stockProduct?.data?.pagination;
@@ -223,7 +221,11 @@ const POS = ({ id, data }) => {
   };
 
   const calculateTotal = () => {
-    const subtotal = tableData?.reduce((sum, item) => sum + item.product.sale_price * item.getQuantity, 0) || 0;
+    const subtotal =
+      tableData?.reduce(
+        (sum, item) => sum + Number(item?.product?.sale_price || 0) * Number(item?.getQuantity || 0),
+        0
+      ) || 0;
 
     let taxCost = 0;
     if (tax_id) {
@@ -257,14 +259,25 @@ const POS = ({ id, data }) => {
   );
 
   const handleSavePayment = () => {
+    if (!branch_id) {
+      toast.error("Please select a branch!");
+      return;
+    }
     if (!client_id) {
       toast.error("Please select a client!");
+      return;
+    }
+    if (!tax_id) {
+      toast.error("Please select an invoice tax!");
       return;
     }
     if (tableData.length === 0) {
       toast.error("Please add at least one product!");
       return;
     }
+    // Prefill with NET total (tax + transport - discount), not subtotal
+    setValue("paid_amount", totals.netTotal);
+    setWithPayment(true);
     setShowModalAfterSubmit(true);
   };
 
@@ -277,6 +290,7 @@ const POS = ({ id, data }) => {
 
     setTableData([]);
     setShowModalAfterSubmit(false);
+    setWithPayment(false);
     setSelectedCategory("");
     setSelectedSubCategory("");
     setSearchInput("");
@@ -286,59 +300,73 @@ const POS = ({ id, data }) => {
     toast.success("Form has been reset");
   };
 
-  const handleFormSubmit = async (formValues) => {
-    if (tableData.length === 0) {
-      toast.error("Please add at least one product!");
+const handleFormSubmit = async (formValues) => {
+    if (!formValues.branch_id) {
+      toast.error("Please select a branch!");
       return;
     }
     if (!formValues.client_id) {
       toast.error("Please select a client!");
       return;
     }
+    if (tableData.length === 0) {
+      toast.error("Please add at least one product!");
+      return;
+    }
+    if (formValues.discount && !formValues.discount_type) {
+      toast.error("Please select a discount type!");
+      return;
+    }
 
-    const { payment_options, ...rest } = formValues;
+    // datetime-local is a LOCAL value — appending ":00Z" shifted every
+    // timestamp by the timezone offset. Let Date parse it as local.
+    const invoiceDate = formValues?.invoice_date
+      ? new Date(formValues.invoice_date).toISOString()
+      : new Date().toISOString();
 
-    const productsPayload = tableData.map((item) => ({
-      quantity: item.getQuantity,
-      sale_price: item.product.sale_price,
-      product_id: item.product.id,
-    }));
-
+    // Explicit whitelist — matches InvoiceListForm. Spreading ...rest was
+    // leaking paid_amount / account_id / cheque_no into the invoice body.
     const finalData = {
-      ...rest,
-      products: productsPayload,
+      branch_id: formValues.branch_id,
+      client_id: formValues.client_id,
+      tax_id: formValues.tax_id,
+      discount_type: formValues.discount_type || undefined,
       discount: Number(formValues?.discount) || 0,
       transport: Number(formValues?.transport) || 0,
-      subtotal: totals.subtotal,
-      tax_amount: totals.taxCost,
-      net_total: totals.netTotal,
-      invoice_date: formValues?.invoice_date
-        ? new Date(`${formValues.invoice_date}:00Z`).toISOString()
-        : new Date().toISOString(),
-      ...(payment_options && {
+      reference: formValues?.reference,
+      po_reference: formValues?.po_reference,
+      payment_terms: formValues?.payment_terms,
+      delivery_place: formValues?.delivery_place,
+      note: formValues?.note,
+      invoice_date: invoiceDate,
+      products: tableData.map((item) => ({
+        quantity: item.getQuantity,
+        sale_price: Number(item.product.sale_price),
+        product_id: item.product.id,
+      })),
+      ...(withPayment && {
         payment: {
-          amount: parseInt(formValues?.paid_amount, 10) || 0,
-          cheque_no: formValues?.cheque_no,
-          receipt_no: formValues?.receipt_no,
-          transaction_date: formValues?.invoice_date
-            ? new Date(`${formValues.invoice_date}:00Z`).toISOString()
-            : new Date().toISOString(),
+          amount: Number(formValues?.paid_amount) || 0,
+          cheque_no: formValues?.cheque_no || undefined,
+          receipt_no: formValues?.receipt_no || undefined,
+          transaction_date: invoiceDate,
           account_id: formValues?.account_id,
         },
       }),
     };
 
-    try {
-      await onSubmit(finalData);
-      // Only clear the cart/UI state once the submit hook has resolved
-      // (it internally toasts + navigates on success and toasts on error;
-      // clearing here regardless would wipe a cart the user still needs
-      // to retry after a failed submission).
+    if (withPayment && !finalData.payment.account_id) {
+      toast.error("Please select an account!");
+      return;
+    }
+
+    // useSubmit now returns true/false instead of swallowing the error,
+    // so a failed save keeps the cart intact for a retry.
+    const ok = await onSubmit(finalData);
+    if (ok) {
       setTableData([]);
+      setWithPayment(false);
       setShowModalAfterSubmit(false);
-    } catch (err) {
-      // useSubmit already surfaces the error toast; keep cart intact so
-      // the user can correct the form and retry without re-adding items.
     }
   };
 
@@ -352,9 +380,9 @@ const POS = ({ id, data }) => {
           }
         }}
       >
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 lg:gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-5 items-start">
           {/* Products */}
-          <div className="space-y-4 xl:order-last xl:col-span-3 bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
+          <div className="space-y-4 xl:order-last xl:col-span-7 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
                 value={selectedCategory}
@@ -373,6 +401,7 @@ const POS = ({ id, data }) => {
               </select>
               <select
                 value={selectedSubCategory}
+                disabled={!selectedCategory}
                 onChange={(e) => setSelectedSubCategory(e.target.value ? Number(e.target.value) : "")}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
               >
@@ -397,8 +426,19 @@ const POS = ({ id, data }) => {
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  // Barcode scanners type + press Enter: if the filter resolves
+                  // to exactly one product, drop it straight into the cart.
+                  if (productsData?.length === 1) {
+                    addToCart(productsData[0]);
+                    setSearchInput("");
+                  }
+                }}
                 type="text"
-                placeholder="Search products by name..."
+                autoFocus
+                placeholder="Scan barcode or search products…"
                 className="w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
               {isStockFetching && (
@@ -416,7 +456,7 @@ const POS = ({ id, data }) => {
 
             {/* Loading skeleton */}
             {isStockFetching && !productsData && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="rounded-xl border border-slate-200 overflow-hidden animate-pulse">
                     <div className="h-28 sm:h-32 bg-slate-100" />
@@ -437,21 +477,26 @@ const POS = ({ id, data }) => {
 
             {/* Product grid */}
             {!isStockError && productsData?.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
                 {productsData.map((product) => {
                   const matched = tableData.find((item) => item.id === product.id);
                   const stock = Number(product?.stock_quantity || 0);
                   const isOutOfStock = stock <= 0;
-                  const isMaxed = matched && Number(matched.getQuantity || 0) >= stock;
+                   const isMaxed = matched && Number(matched.getQuantity || 0) >= stock;
                   const isDisabled = isOutOfStock || isMaxed;
+                  const inCart = Boolean(matched);
 
                   return (
                     <Card
                       key={product.id}
-                      className={`relative overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ${
-                        isDisabled
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
+                      className={`relative overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${
+                        isOutOfStock
+                          ? "border-slate-200 opacity-50 cursor-not-allowed"
+                          : isMaxed
+                          ? "border-amber-300 ring-1 ring-amber-200 cursor-not-allowed"
+                          : inCart
+                          ? "border-indigo-300 ring-1 ring-indigo-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                          : "border-slate-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
                       }`}
                     >
                       <CardContent
@@ -460,10 +505,10 @@ const POS = ({ id, data }) => {
                       >
                         <div
                           className={`absolute top-1.5 left-1.5 z-10 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shadow-sm ${
-                            isOutOfStock ? "bg-slate-400" : "bg-red-500"
+                            isOutOfStock ? "bg-slate-400" : isMaxed ? "bg-amber-500" : "bg-red-500"
                           }`}
                         >
-                          {isOutOfStock ? "OUT" : stock}
+                          {isOutOfStock ? "OUT" : isMaxed ? "MAX" : stock}
                         </div>
 
                         {matched && (
@@ -494,7 +539,7 @@ const POS = ({ id, data }) => {
                           </p>
                           {product?.product?.sale_price != null && (
                             <p className="text-[11px] sm:text-xs font-semibold text-indigo-600 mt-0.5">
-                              ৳{Number(product.product.sale_price).toFixed(2)}
+                              {currency}{Number(product.product.sale_price).toFixed(2)}
                             </p>
                           )}
                         </div>
@@ -557,7 +602,7 @@ const POS = ({ id, data }) => {
           </div>
 
           {/* Cart / Checkout */}
-          <div className="space-y-4 xl:col-span-2">
+          <div className="space-y-4 xl:col-span-5">
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CustomReactSelect
@@ -602,54 +647,46 @@ const POS = ({ id, data }) => {
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px]">
+              <div className="overflow-x-auto max-h-[46vh] xl:max-h-[42vh] overflow-y-auto overscroll-contain">
+                <table className="w-full min-w-[360px] table-auto">
                   <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Product
-                      </th>
-                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Price
-                      </th>
-                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Qty
-                      </th>
-                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Subtotal
-                      </th>
-                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Action
-                      </th>
+                    <tr className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                      <th className="px-3 py-2 text-left w-full">Product</th>
+                      <th className="px-2 py-2 text-right whitespace-nowrap">Price</th>
+                      <th className="px-2 py-2 text-center whitespace-nowrap">Quantity</th>
+                      <th className="px-2 py-2 text-right whitespace-nowrap">Subtotal</th>
+                      <th className="px-3 py-2 text-right whitespace-nowrap w-px">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {tableData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="p-3 text-sm text-slate-700 max-w-[140px] truncate" title={item?.product?.name}>
+                        <td className="px-3 py-1.5 text-[13px] text-slate-700 max-w-[160px] truncate" title={item?.product?.name}>
                           {item?.product?.name}
                         </td>
-                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">
-                          ৳{Number(item?.product?.sale_price || 0).toFixed(2)}
+                        <td className="px-2 py-1.5 text-[13px] text-slate-600 text-right whitespace-nowrap tabular-nums">
+                          {currency}{Number(item?.product?.sale_price || 0).toFixed(2)}
                         </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1">
+                        <td className="px-2 py-1.5">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 updateQuantityByStep(item.id, -1);
                               }}
-                              disabled={item.getQuantity <= 1}
-                              className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                              disabled={Number(item.getQuantity) <= 1}
+                               className="w-6 h-6 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0 transition-colors"
                             >
-                              <Minus className="w-3.5 h-3.5" />
+                              <Minus className="w-3 h-3" />
                             </button>
                             <input
-                              className="w-12 text-center border border-slate-200 rounded-md py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="w-10 h-6 text-center border border-slate-200 rounded-md px-0.5 text-[13px] leading-none focus:outline-none focus:ring-2 focus:ring-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               type="number"
+                              inputMode="numeric"
+                              onFocus={(e) => e.target.select()}
                               min={1}
-                              max={item.stock_quantity}
+                              max={Number(item.stock_quantity || 0)}
                               onChange={(e) => {
                                 e.stopPropagation();
                                 updateQuantityByInput(item.id, e.target.value);
@@ -662,22 +699,23 @@ const POS = ({ id, data }) => {
                                 e.stopPropagation();
                                 updateQuantityByStep(item.id, 1);
                               }}
-                              disabled={item.getQuantity >= item.stock_quantity}
-                              className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                              disabled={Number(item.getQuantity) >= Number(item.stock_quantity || 0)}
+                              className="w-6 h-6 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0 transition-colors"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         </td>
-                        <td className="p-3 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                          ৳{(Number(item?.product?.sale_price || 0) * item.getQuantity).toFixed(2)}
+                        <td className="px-2 py-1.5 text-[13px] font-semibold text-slate-700 text-right whitespace-nowrap tabular-nums">
+                          {currency}{(Number(item?.product?.sale_price || 0) * item.getQuantity).toFixed(2)}
                         </td>
-                        <td className="p-3">
+                        <td className="px-3 py-1.5 text-right w-px">
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:text-red-600 p-1"
+                            className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 active:bg-red-100 transition-colors"
                             title="Remove"
+                            aria-label={`Remove ${item?.product?.name || "item"}`}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -686,7 +724,7 @@ const POS = ({ id, data }) => {
                     ))}
                     {tableData.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-6 text-center text-sm text-slate-400">
+                        <td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-400">
                           No items in cart. Tap a product to add it.
                         </td>
                       </tr>
@@ -695,8 +733,11 @@ const POS = ({ id, data }) => {
                 </table>
               </div>
 
-              <div className="bg-slate-50 border-t border-slate-200 px-3 py-2.5 text-right">
-                <span className="text-sm font-bold text-slate-700">Sub Total: ৳{totals.subtotal.toFixed(2)}</span>
+              <div className="flex items-center justify-between bg-slate-50 border-t border-slate-200 px-3 sm:px-4 py-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Sub Total</span>
+                <span className="text-sm font-bold text-slate-700 tabular-nums">
+                  {currency}{totals.subtotal.toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -740,8 +781,7 @@ const POS = ({ id, data }) => {
                     />
                   </div>
                   <div className="flex-[0_0_25%] p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-right text-sm font-medium text-slate-600 truncate">
-                    {storeCurrency?.data?.currency?.symbol}
-                    {totals.taxCost}
+                    {currency}{Number(totals.taxCost).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -753,30 +793,37 @@ const POS = ({ id, data }) => {
                   Net Total
                 </span>
                 <span className="relative text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                  ৳{totals.netTotal.toFixed(2)}
+                  {currency}{totals.netTotal.toFixed(2)}
                 </span>
               </div>
             </div>
 
             {showModalAfterSubmit && (
               <POSModal
-                setShowModalAfterSubmit={setShowModalAfterSubmit}
+                onClose={() => {
+                  setWithPayment(false);
+                  setShowModalAfterSubmit(false);
+                }}
                 register={register}
                 errors={errors}
                 control={control}
-                paymentOptions={paymentOptions}
-                addPaymentOptions={addPaymentOptions}
                 accounts={accounts}
-                calculateTotal={calculateTotal}
+                totals={totals}
+                currency={currency}
+                paidAmount={watch("paid_amount")}
+                isLoading={isLoading}
               />
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <div className="sticky bottom-0 z-20 -mx-3 px-3 py-2.5 bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-3 gap-2 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0 sm:gap-3">
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors order-1"
-                onClick={() => setShowModalAfterSubmit(false)}
+                onClick={() => {
+                  setWithPayment(false);
+                  setShowModalAfterSubmit(false);
+                }}
               >
                 {isLoading ? (
                   <Loader2 size={15} className="animate-spin" />
