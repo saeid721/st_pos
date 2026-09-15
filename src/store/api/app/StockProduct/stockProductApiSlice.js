@@ -19,12 +19,22 @@ export const stockProductsApi = apiSlice.injectEndpoints({
         store_id = "",
         category_id = "",
         sub_category_id = "",
-      }) =>
-        `stock-product/pagination?page=${page}&limit=${limit}&order=${order}&search=${encodeURIComponent(
-          search
-        )}&store_id=${store_id}${category_id ? `&category_id=${category_id}` : ""}${
-          sub_category_id ? `&sub_category_id=${sub_category_id}` : ""
-        }${branch_id ? `&branch_id=${branch_id}` : ""}`,
+      }) => {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+          order,
+          store_id: String(store_id),
+        });
+
+        const normalizedSearch = String(search || "").trim();
+        if (normalizedSearch) params.set("search", normalizedSearch);
+        if (category_id) params.set("category_id", String(category_id));
+        if (sub_category_id) params.set("sub_category_id", String(sub_category_id));
+        if (branch_id) params.set("branch_id", String(branch_id));
+
+        return `stock-product/pagination?${params.toString()}`;
+      },
       providesTags: ["stockProducts"],
     }),
 
