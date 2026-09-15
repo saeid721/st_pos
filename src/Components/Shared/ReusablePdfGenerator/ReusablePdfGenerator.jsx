@@ -35,10 +35,6 @@ const ReusablePdfGenerator = ({ title, columns, data, fileName, setPdfButtonClic
 
     const generatePdf = async (dataToExport) => {
         try {
-            const [{ jsPDF }, { default: autoTable }] = await Promise.all([
-                import('jspdf'),
-                import('jspdf-autotable'),
-            ]);
             const doc = new jsPDF({ orientation: 'landscape' });
             const backendUrl = import.meta.env.VITE_LOCAL_API_URL;
 

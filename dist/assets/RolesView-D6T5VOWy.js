@@ -1,1 +1,0 @@
-import"./rolldown-runtime-B0Z9INg1.js";import{n as e,t}from"./jsx-runtime-CF4O39kz.js";import{i as n}from"./rolesApiSlice-DATNtBTk.js";import"./ViewModal-bH_k9t3G.js";e();var r=t(),i=({isOpen:e,onClose:t,data:i})=>{let{data:a}=n(i?.id);return a?.data?.status,a?.data?.name,(0,r.jsx)(`div`,{})};export{i as default};

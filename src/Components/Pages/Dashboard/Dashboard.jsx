@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DashboardCard from "./DashboardComponents/DashboardCard";
 import { useGetMonthlySubscriptionCountsQuery } from "../../../store/api/app/Subscriptions/subscriptionsApiSlice";
+const LineChartComponent = React.lazy(() => import("../../Shared/LineChartComponent/LineChartLineChartComponent"));
 import DashboardSubscriptionCountCard from "./DashboardComponents/DashboardSubscriptionCountCard";
 import { useSelector } from "react-redux";
 import { useGetStoresByIdQuery } from "../../../store/api/app/store/storeApiSlice";
@@ -8,8 +9,6 @@ import { use } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useGetPlansQuery } from "../../../store/api/app/Plans/plansApiSlice";
 import PlanModal from "../../Shared/PlanModal/PlanModal";
-
-const LineChartComponent = React.lazy(() => import("../../Shared/LineChartComponent/LineChartLineChartComponent"));
 const StoreDashboard = React.lazy(() => import("./StoreDashboard/StoreDashboard"));
 
 const Dashboard = () => {
@@ -107,7 +106,7 @@ const Dashboard = () => {
               </select>
             </div>
             {!isLoading ? (
-              <React.Suspense fallback={<div className="min-h-[280px] flex items-center justify-center text-sm text-slate-500">Loading chart...</div>}><LineChartComponent data={chartData} /></React.Suspense>
+              <LineChartComponent data={chartData} />
             ) : (
               <p>Loading data...</p>
             )}
@@ -127,7 +126,7 @@ const Dashboard = () => {
 
       {
         (pathname.includes("/store/dashboard") && (
-          <React.Suspense fallback={<div className="min-h-[280px] flex items-center justify-center text-sm text-slate-500">Loading dashboard...</div>}><StoreDashboard /></React.Suspense>
+          <StoreDashboard />
         ))
       }
 

@@ -1,1 +1,0 @@
-import"./rolldown-runtime-B0Z9INg1.js";import{n as e,t}from"./jsx-runtime-CF4O39kz.js";import{at as n}from"./index-SIuLrdIr.js";import{t as r}from"./FooterForm-CAa6aGkN.js";e();var i=t(),a=()=>{let{footer_type:e}=n();return(0,i.jsx)(`div`,{children:(0,i.jsx)(r,{footer_type:e})})};export{a as default};

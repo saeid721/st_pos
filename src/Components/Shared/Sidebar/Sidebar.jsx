@@ -6,7 +6,7 @@ import getSidebarAdminRoutes from "../../../lib/adminRoutes";
 import getSidebarStoreRoutes from "../../../lib/storeRoutes";
 import { useGetStoresByIdQuery } from "../../../store/api/app/store/storeApiSlice";
 import { useSelector } from "react-redux";
-import LOGO from '../../../../public/ST_POS_LOGO.png';
+const LOGO = "/logo.png";
 
 const STORE_SECTION_GROUPS = {
   DASHBOARD: ["Dashboard"],

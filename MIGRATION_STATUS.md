@@ -1,16 +1,20 @@
-# React Project Performance Optimization Status
+# Migration Status
 
-## Completed
-- Preserved existing application structure, routes, API integration, authentication, and business logic.
-- Added route-level lazy loading for page components to reduce initial JavaScript payload.
-- Lazy-loaded heavy PDF generation dependencies where applicable.
-- Lazy-loaded heavy dashboard/chart dependencies where applicable.
-- Fixed JSX helper files by using `.jsx` extensions so Vite 8/Rolldown parses them correctly.
-- Fixed ESLint flat-config plugin registration (`react/prop-types` is a rule, not a plugin entry).
-- Kept compatibility anchors such as React 18, Tailwind 3, react-to-print 2.x, react-table 7.x and react-date-range 2.x.
+## Compatibility fix
+
+The first migrated package manifest used ESLint 10.10.0 while the existing `eslint-plugin-react` 7.37.5 declares a peer range ending at ESLint 9.7. The project therefore failed `npm install` with `ERESOLVE`.
+
+The manifest has been corrected to the latest ESLint 9.x compatibility line for this existing plugin stack:
+
+- `eslint`: `~9.39.0`
+- `@eslint/js`: `~9.39.0`
+
+This avoids `--force` and `--legacy-peer-deps` and keeps the existing React ESLint plugin architecture.
 
 ## User validation
-Run:
+
+Run in the project directory:
+
 ```powershell
 npm install
 npm run lint
@@ -18,4 +22,4 @@ npm run build
 npm run dev
 ```
 
-The optimization target is initial bundle reduction through route/component code splitting rather than hiding Vite's chunk-size warning.
+If the next command reports a source-level migration error (for example from React Router or another major dependency), that error should be fixed based on the actual project code rather than bypassed with npm flags.

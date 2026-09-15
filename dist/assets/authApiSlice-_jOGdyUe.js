@@ -1,1 +1,0 @@
-import{t as e}from"./apiSlice-CLno64QQ.js";var{useLoginMutation:t,useLoginUserMutation:n}=e.injectEndpoints({endpoints:e=>({login:e.mutation({query:e=>({url:`admins/login`,method:`POST`,body:e}),invalidatesTags:[`admins`]}),loginUser:e.mutation({query:e=>({url:`store-users/login`,method:`POST`,body:e}),invalidatesTags:[`users`]})})});export{n,t};

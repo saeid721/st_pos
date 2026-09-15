@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-CF72uaaz.js";import{i as n}from"./rolesApiSlice-By3zzCOn.js";import"./ViewModal-D4cO2HHw.js";e();var r=t(),i=({isOpen:e,onClose:t,data:i})=>{let{data:a}=n(i?.id);return a?.data?.status,a?.data?.name,(0,r.jsx)(`div`,{})};export{i as default};

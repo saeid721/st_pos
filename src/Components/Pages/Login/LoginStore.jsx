@@ -30,7 +30,7 @@ const LoginStore = () => {
         <div className="w-full max-w-md p-8 rounded-lg shadow-lg bg-gray-900 bg-opacity-90 text-white">
           <div className="flex justify-center items-center mb-8">
             <img
-              src="/ST_POS_LOGO.png"
+              src="/logo.png"
               alt=""
               className="max-w-[150px] h-auto"
             />

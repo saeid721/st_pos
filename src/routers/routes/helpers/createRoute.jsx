@@ -7,14 +7,13 @@ const RouteLoadingFallback = () => (
   </div>
 );
 
-const createRoute = (path, component) => {
-  return {
-    path,
-    element: (
-      <React.Suspense fallback={<RouteLoadingFallback />}>
-        <PageRoute>{component}</PageRoute>
-      </React.Suspense>
-    ),
-  };
-};
+const createRoute = (path, component) => ({
+  path,
+  element: (
+    <React.Suspense fallback={<RouteLoadingFallback />}>
+      <PageRoute>{component}</PageRoute>
+    </React.Suspense>
+  ),
+});
+
 export default createRoute;

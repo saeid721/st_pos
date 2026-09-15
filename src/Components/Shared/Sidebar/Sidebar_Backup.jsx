@@ -791,7 +791,7 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
             isExpanded || isHovered ? "opacity-100" : "opacity-0 "
           }`}
         >
-          <img className="max-w-[130px]" src="/ST_POS_LOGO.png" alt="" />
+          <img className="max-w-[130px]" src="/logo.png" alt="" />
         </div>
         <button
           className={`${

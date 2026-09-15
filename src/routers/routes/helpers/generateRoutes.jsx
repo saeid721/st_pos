@@ -13,21 +13,16 @@ const wrap = (component) => (
   </React.Suspense>
 );
 
-const generateRoutes = (rootPath, components) => {
-  return {
-    path: rootPath,
-    children: [
-      { path: "", element: wrap(components.root) },
-      { path: "new", element: wrap(components.new) },
-      {
-        path: ":id",
-        children: [
-          { path: "", element: wrap(components.view) },
-          { path: "edit", element: wrap(components.edit) },
-        ],
-      },
-    ],
-  };
-};
+const generateRoutes = (rootPath, components) => ({
+  path: rootPath,
+  children: [
+    { path: "", element: wrap(components.root) },
+    { path: "new", element: wrap(components.new) },
+    { path: ":id", children: [
+      { path: "", element: wrap(components.view) },
+      { path: "edit", element: wrap(components.edit) },
+    ] },
+  ],
+});
 
 export default generateRoutes;
