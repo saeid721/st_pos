@@ -786,7 +786,7 @@ const handleFormSubmit = async (formValues) => {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 rounded-xl shadow-md shadow-indigo-200/60 px-4 py-3.5 flex items-center justify-between">
+              <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 rounded-xl shadow-md shadow-indigo-200/60 px-4 py-2 flex items-center justify-between">
                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full" />
                 <div className="absolute -right-2 -bottom-8 w-20 h-20 bg-white/10 rounded-full" />
                 <span className="relative text-xs sm:text-sm font-medium text-indigo-100 tracking-wide uppercase">
