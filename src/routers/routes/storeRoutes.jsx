@@ -114,7 +114,7 @@ const Expense = React.lazy(() => import("../../Components/Pages/Expense/Expense"
 const ExpenseAdd = React.lazy(() => import("../../Components/Pages/Expense/ExpenseAdd"));
 const ExpenseView = React.lazy(() => import("../../Components/Pages/Expense/ExpenseView"));
 const ExpenseEdit = React.lazy(() => import("../../Components/Pages/Expense/ExpenseEdit"));
-const POS = React.lazy(() => import("../../Components/Pages/POS/Pos"));
+const POS = React.lazy(() => import("../../Components/Pages/POS/POS"));
 const LoanAuthority = React.lazy(() => import("../../Components/Pages/LoanAuthority/LoanAuthority"));
 const LoanAuthorityAdd = React.lazy(() => import("../../Components/Pages/LoanAuthority/LoanAuthorityAdd"));
 const LoanAuthorityView = React.lazy(() => import("../../Components/Pages/LoanAuthority/LoanAuthorityView"));
