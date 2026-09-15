@@ -17,7 +17,7 @@ const STORE_SECTION_GROUPS = {
   REPORTS: ["Balance Sheet", "Summary Report", "Profit Loss Report", "Expense Report", "Item Report", "Inventory Report"],
   ACCOUNT: ["Setup", "Database Backup", "Account", "Users", "Blog", "Feature", "Application Settings", "Footer", "Settings", "App Verify"],
 };
-const STORE_SECTION_ORDER = ["DASHBOARD", "ACTIVITIES", "ACCOUNTING", "PEOPLE", "INVENTORY", "REPORTS", "ACCOUNT"];
+const STORE_SECTION_ORDER = ["DASHBOARD", "ACTIVITIES", "INVENTORY", "PEOPLE", "ACCOUNTING", "REPORTS", "ACCOUNT"];
 
 const Sidebar = ({ isExpanded, setIsExpanded, isMobileOpen, setIsMobileOpen, isPOSPage }) => {
   const { pathname: linkPath } = useLocation();
