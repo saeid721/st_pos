@@ -1,6 +1,4 @@
 import React, { useEffect } from 'react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatDate } from '../../../lib/format';
 
 const ReusablePdfGenerator = ({ title, columns, data, fileName, setPdfButtonClick }) => {
@@ -37,6 +35,10 @@ const ReusablePdfGenerator = ({ title, columns, data, fileName, setPdfButtonClic
 
     const generatePdf = async (dataToExport) => {
         try {
+            const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ]);
             const doc = new jsPDF({ orientation: 'landscape' });
             const backendUrl = import.meta.env.VITE_LOCAL_API_URL;
 
