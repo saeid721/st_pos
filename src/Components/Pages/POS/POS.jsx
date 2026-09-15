@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus, Trash2, MinusCircle, PlusCircle, Minus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/Components/ui/card";
 import { useGetStockProductsByPaginationQuery } from "../../../store/api/app/StockProduct/stockProductApiSlice";
 import { useGetCategoriesByPaginationQuery } from "../../../store/api/app/Category/categoryApiSlice";
 import { useGetSubCategoriesByPaginationQuery } from "../../../store/api/app/SubCategory/subCategoryApiSlice";
