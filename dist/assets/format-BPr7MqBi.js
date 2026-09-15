@@ -1,1 +1,0 @@
-import{r as e}from"./index-BuBZ1uY3.js";var t=t=>{let{settings:n}=e();return t==null?`${n?.currency}0`:`${n?.currency||`৳`}${t}`},n=e=>{if(!e)return``;let t=new Date(e);return`${t.getDate()}th ${t.toLocaleString(`default`,{month:`short`})}, ${t.getFullYear()}`},r=e=>e?new Date(e).toISOString().slice(0,16):``;export{n,r,t};
