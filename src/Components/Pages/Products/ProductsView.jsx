@@ -13,17 +13,6 @@ const ProductsView = () => {
 
   return (
     <div className="bg-white min-h-screen font-sans">
-      {/* Header */}
-      <div className="border-b p-4 flex justify-between items-center bg-gray-50">
-        <h1 className="text-lg font-medium text-gray-700">Product Details</h1>
-        <div className="text-sm text-blue-500 flex space-x-2">
-          <a href="#">Dashboard</a>
-          <span>&gt;</span>
-          <a href="#">Products</a>
-          <span>&gt;</span>
-          <span className="text-gray-500">Details</span>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="p-4">

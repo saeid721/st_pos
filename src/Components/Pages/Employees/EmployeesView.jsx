@@ -24,18 +24,6 @@ const EmployeesView = () => {
   return (
     <div className="bg-gray-50 min-h-screen p-4">
       <div className="">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-800">Employee Details</h1>
-          <div className="text-sm breadcrumbs">
-            <ul className="flex space-x-2">
-              <li><a href="#" className="text-blue-500">Dashboard</a></li>
-              <li><span className="text-gray-500">&gt;</span></li>
-              <li><a href="#" className="text-blue-500">Employees</a></li>
-              <li><span className="text-gray-500">&gt;</span></li>
-              <li><span className="text-gray-700">Details</span></li>
-            </ul>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white p-6 rounded-lg shadow col-span-1">

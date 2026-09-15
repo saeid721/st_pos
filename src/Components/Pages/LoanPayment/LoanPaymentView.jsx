@@ -52,15 +52,6 @@ const LoanPaymentView = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen" ref={componentRef}>
-      {/* Header */}
-      <div className="bg-white p-4 shadow-sm">
-        <div className="container mx-auto">
-          <div className="flex justify-between items-center">
-            <h1 className="text-xl font-semibold">Loan Payment Details</h1>
-
-          </div>
-        </div>
-      </div>
 
       <div className="container mx-auto p-6">
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">

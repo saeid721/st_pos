@@ -58,16 +58,6 @@ const BalanceTransferView = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen" ref={componentRef}>
-      {/* Header */}
-      <div className="bg-white p-4 shadow-sm">
-        <div className="container mx-auto">
-          <div className="flex justify-between items-center">
-            {/* Left - Title */}
-            <h1 className="text-xl font-semibold">Transfer Details</h1>
-
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="container mx-auto p-6">
