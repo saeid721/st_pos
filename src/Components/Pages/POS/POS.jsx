@@ -35,6 +35,7 @@ import POSModal from "../../Shared/Modal/POSModal";
 import ClientCreateModal from "./ClientCreateModal";
 
 const DEBOUNCE_MS = 400;
+const CART_ADD_SOUND_VOLUME = 0.35;
 
 const POS = ({ id, data }) => {
   const { register, control, errors, handleSubmit, onSubmit, watch, reset, setValue, isLoading } = useSubmit(
@@ -47,6 +48,8 @@ const POS = ({ id, data }) => {
   const backendUrl = import.meta.env.VITE_LOCAL_API_URL;
   const currency = storeCurrency?.data?.currency?.symbol || "৳";
   const [tableData, setTableData] = useState([]);
+  const tableDataRef = useRef([]);
+  const cartAddAudioRef = useRef(null);
   const [showModalAfterSubmit, setShowModalAfterSubmit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
@@ -149,6 +152,23 @@ const POS = ({ id, data }) => {
     return pages;
   };
 
+  const commitTableData = (nextTableData) => {
+    tableDataRef.current = nextTableData;
+    setTableData(nextTableData);
+  };
+
+  const playCartAddSound = () => {
+    if (!cartAddAudioRef.current) {
+      cartAddAudioRef.current = new Audio(`${import.meta.env.BASE_URL}sounds/cart-add.wav`);
+      cartAddAudioRef.current.preload = "auto";
+      cartAddAudioRef.current.volume = CART_ADD_SOUND_VOLUME;
+    }
+
+    const audio = cartAddAudioRef.current;
+    audio.currentTime = 0;
+    audio.play()?.catch(() => undefined);
+  };
+
   // ---- Cart logic -----------------------------------------------------
   // Cart is keyed by product.id (the stock-product row id), never by grid
   // render index, so adding/updating always targets the correct cart row
@@ -159,65 +179,64 @@ const POS = ({ id, data }) => {
       toast.error("This product is out of stock!");
       return;
     }
-    setTableData((prev) => {
-      const existingIndex = prev.findIndex((item) => item.id === product.id);
-      if (existingIndex !== -1) {
-        const existing = prev[existingIndex];
-        if (existing.getQuantity >= stock) {
-          setTimeout(() => toast.error(`Only ${stock} in stock!`), 0);
-          return prev;
-        }
-        const next = [...prev];
-        next[existingIndex] = { ...existing, getQuantity: existing.getQuantity + 1 };
-        return next;
+    const currentTableData = tableDataRef.current;
+    const existingIndex = currentTableData.findIndex((item) => item.id === product.id);
+    let nextTableData;
+
+    if (existingIndex !== -1) {
+      const existing = currentTableData[existingIndex];
+      if (existing.getQuantity >= stock) {
+        toast.error(`Only ${stock} in stock!`);
+        return;
       }
-      return [...prev, { ...product, getQuantity: 1 }];
-    });
+      nextTableData = [...currentTableData];
+      nextTableData[existingIndex] = { ...existing, getQuantity: existing.getQuantity + 1 };
+    } else {
+      nextTableData = [...currentTableData, { ...product, getQuantity: 1 }];
+    }
+
+    commitTableData(nextTableData);
+    playCartAddSound();
   };
 
   const updateQuantityByStep = (productId, increment) => {
-    setTableData((prev) => {
-      const idx = prev.findIndex((item) => item.id === productId);
-      if (idx === -1) return prev;
-      const current = prev[idx];
-      const stock = Number(current.stock_quantity || 0);
-      const newQuantity = Math.max(1, current.getQuantity + increment);
-      if (newQuantity > stock) {
-        setTimeout(() => toast.error("Quantity exceeds available stock!"), 0);
-        return prev;
-      }
-      const next = [...prev];
-      next[idx] = { ...current, getQuantity: newQuantity };
-      return next;
-    });
+    const idx = tableDataRef.current.findIndex((item) => item.id === productId);
+    if (idx === -1) return;
+    const current = tableDataRef.current[idx];
+    const stock = Number(current.stock_quantity || 0);
+    const newQuantity = Math.max(1, current.getQuantity + increment);
+    if (newQuantity > stock) {
+      toast.error("Quantity exceeds available stock!");
+      return;
+    }
+    const next = [...tableDataRef.current];
+    next[idx] = { ...current, getQuantity: newQuantity };
+    commitTableData(next);
   };
 
   const updateQuantityByInput = (productId, rawValue) => {
-    setTableData((prev) => {
-      const idx = prev.findIndex((item) => item.id === productId);
-      if (idx === -1) return prev;
-      const current = prev[idx];
-      const stock = Number(current.stock_quantity || 0);
+    const idx = tableDataRef.current.findIndex((item) => item.id === productId);
+    if (idx === -1) return;
+    const current = tableDataRef.current[idx];
+    const stock = Number(current.stock_quantity || 0);
 
-      // Guard against "", non-numeric, negative, or 0 input turning into NaN downstream
-      const parsed = Number(rawValue);
-      const safeValue = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+    // Guard against "", non-numeric, negative, or 0 input turning into NaN downstream
+    const parsed = Number(rawValue);
+    const safeValue = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+    const next = [...tableDataRef.current];
 
-      if (safeValue > stock) {
-        setTimeout(() => toast.error(`Available stock ${stock}!`), 0);
-        const next = [...prev];
-        next[idx] = { ...current, getQuantity: stock || 1 };
-        return next;
-      }
-
-      const next = [...prev];
+    if (safeValue > stock) {
+      toast.error(`Available stock ${stock}!`);
+      next[idx] = { ...current, getQuantity: stock || 1 };
+    } else {
       next[idx] = { ...current, getQuantity: safeValue };
-      return next;
-    });
+    }
+
+    commitTableData(next);
   };
 
   const removeFromCart = (productId) => {
-    setTableData((prev) => prev.filter((item) => item.id !== productId));
+    commitTableData(tableDataRef.current.filter((item) => item.id !== productId));
   };
 
   const calculateTotal = () => {
@@ -288,7 +307,7 @@ const POS = ({ id, data }) => {
     const confirmed = window.confirm("This will clear the cart and all entered fields. Continue?");
     if (!confirmed) return;
 
-    setTableData([]);
+    commitTableData([]);
     setShowModalAfterSubmit(false);
     setWithPayment(false);
     setSelectedCategory("");
@@ -364,7 +383,7 @@ const handleFormSubmit = async (formValues) => {
     // so a failed save keeps the cart intact for a retry.
     const ok = await onSubmit(finalData);
     if (ok) {
-      setTableData([]);
+      commitTableData([]);
       setWithPayment(false);
       setShowModalAfterSubmit(false);
     }
