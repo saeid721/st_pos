@@ -3,13 +3,26 @@ import { X, Loader2 } from "lucide-react";
 import TextInput from "../TextInput/TextInput";
 import CustomReactSelect from "../Select/CustomReactSelect";
 
-const POSModal = ({ onClose, register, errors, control, accounts, totals, currency = "৳", paidAmount, isLoading }) => {
+const POSModal = ({ onClose, register, errors, control, accounts, totals, currency = "৳", paidAmount, isLoading, setValue, watch }) => {
+  const accountId = watch("account_id");
+  const selectedAccount = accounts?.data?.find((a) => a.id === accountId);
+  const isCash = selectedAccount?.bank_name?.toLowerCase()?.includes("cash");
+
   // Esc to close + lock body scroll while the sheet is open
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    // Pre-fill invoice_date with current local datetime (datetime-local needs YYYY-MM-DDTHH:MM)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const localISO =
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+      `T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    setValue("invoice_date", localISO);
+
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
@@ -80,12 +93,16 @@ const POSModal = ({ onClose, register, errors, control, accounts, totals, curren
             placeholder="Enter paid amount"
             required={true}
           />
-          <TextInput name="cheque_no" label="Cheque No" type="text" register={register} error={errors?.cheque_no} placeholder="Enter cheque no" />
-          <TextInput name="receipt_no" label="Receipt No" type="text" register={register} error={errors?.receipt_no} placeholder="Enter receipt no" />
-          <TextInput name="po_reference" label="PO Reference" type="text" register={register} error={errors?.po_reference} placeholder="Enter PO reference" />
-          <TextInput name="payment_terms" label="Payment Terms" type="text" register={register} error={errors?.payment_terms} placeholder="Enter payment terms" />
-          <TextInput name="reference" label="Reference" type="text" register={register} error={errors?.reference} placeholder="Enter reference" />
-          <TextInput name="delivery_place" label="Delivery Place" type="text" register={register} error={errors?.delivery_place} placeholder="Enter delivery place" />
+          {!isCash && (
+            <>
+              <TextInput name="cheque_no" label="Cheque No" type="text" register={register} error={errors?.cheque_no} placeholder="Enter cheque no" />
+              <TextInput name="receipt_no" label="Receipt No" type="text" register={register} error={errors?.receipt_no} placeholder="Enter receipt no" />
+              <TextInput name="po_reference" label="PO Reference" type="text" register={register} error={errors?.po_reference} placeholder="Enter PO reference" />
+              <TextInput name="payment_terms" label="Payment Terms" type="text" register={register} error={errors?.payment_terms} placeholder="Enter payment terms" />
+              <TextInput name="reference" label="Reference" type="text" register={register} error={errors?.reference} placeholder="Enter reference" />
+              <TextInput name="delivery_place" label="Delivery Place" type="text" register={register} error={errors?.delivery_place} placeholder="Enter delivery place" />
+            </>
+          )}
           <TextInput name="invoice_date" label="Date" type="datetime-local" register={register} error={errors?.invoice_date} />
           <TextInput name="note" label="Note" type="text" register={register} error={errors?.note} placeholder="Enter note" />
         </div>

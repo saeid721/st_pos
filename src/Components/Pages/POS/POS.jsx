@@ -456,11 +456,14 @@ const handleFormSubmit = async (formValues) => {
 
             {/* Loading skeleton */}
             {isStockFetching && !productsData && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+                  <div key={i} className="rounded-lg border border-slate-200 overflow-hidden animate-pulse bg-white">
                     <div className="h-28 sm:h-32 bg-slate-100" />
-                    <div className="h-8 bg-slate-100 mt-1 mx-2 rounded" />
+                    <div className="px-2 pt-1.5 pb-2 space-y-1.5">
+                      <div className="h-3 bg-slate-100 rounded-full w-4/5" />
+                      <div className="h-3.5 bg-slate-100 rounded-full w-2/5" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -477,7 +480,7 @@ const handleFormSubmit = async (formValues) => {
 
             {/* Product grid */}
             {!isStockError && productsData?.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                 {productsData.map((product) => {
                   const matched = tableData.find((item) => item.id === product.id);
                   const stock = Number(product?.stock_quantity || 0);
@@ -489,14 +492,14 @@ const handleFormSubmit = async (formValues) => {
                   return (
                     <Card
                       key={product.id}
-                      className={`relative overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${
+                      className={`relative overflow-hidden rounded-lg border transition-all duration-150 group ${
                         isOutOfStock
-                          ? "border-slate-200 opacity-50 cursor-not-allowed"
+                          ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed shadow-none"
                           : isMaxed
-                          ? "border-amber-300 ring-1 ring-amber-200 cursor-not-allowed"
+                          ? "border-amber-300 bg-amber-50/30 ring-1 ring-amber-200 cursor-not-allowed shadow-sm"
                           : inCart
-                          ? "border-indigo-300 ring-1 ring-indigo-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
-                          : "border-slate-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                          ? "border-indigo-400 bg-white ring-2 ring-indigo-100 cursor-pointer shadow-md"
+                          : "border-slate-200 bg-white cursor-pointer shadow-sm hover:shadow-md hover:border-indigo-200"
                       }`}
                     >
                       <CardContent
@@ -504,43 +507,67 @@ const handleFormSubmit = async (formValues) => {
                         onClick={() => !isDisabled && addToCart(product)}
                       >
                         <div
-                          className={`absolute top-1.5 left-1.5 z-10 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shadow-sm ${
-                            isOutOfStock ? "bg-slate-400" : isMaxed ? "bg-amber-500" : "bg-red-500"
+                          className={`absolute top-1.5 left-1.5 z-10 text-white px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide shadow ${
+                            isOutOfStock
+                              ? "bg-slate-500"
+                              : isMaxed
+                              ? "bg-amber-500"
+                              : stock <= 5
+                              ? "bg-orange-500"
+                              : "bg-emerald-500"
                           }`}
                         >
                           {isOutOfStock ? "OUT" : isMaxed ? "MAX" : stock}
                         </div>
 
                         {matched && (
-                          <div className="absolute top-1.5 right-1.5 z-10 bg-indigo-600 text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold shadow-sm">
+                          <div className="absolute top-1.5 right-1.5 z-10 bg-indigo-600 text-white min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold shadow">
                             {matched.getQuantity}
                           </div>
                         )}
 
-                        <div className="h-28 sm:h-32 bg-slate-50 flex items-center justify-center overflow-hidden">
+                        <div className="relative h-28 sm:h-32 bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center overflow-hidden">
                           {product?.product?.main_image ? (
                             <img
-                              className="h-full w-full object-cover"
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
                               src={`${backendUrl}${product.product.main_image}`}
                               alt={product?.product?.name}
                               loading="lazy"
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
+                                e.currentTarget.nextSibling?.classList?.remove("hidden");
                               }}
                             />
-                          ) : (
-                            <ImageOff className="text-slate-300" size={24} />
+                          ) : null}
+                          <div className={`${product?.product?.main_image ? "hidden" : "flex"} flex-col items-center gap-1 text-slate-300`}>
+                            <ImageOff size={22} />
+                            <span className="text-[9px] font-medium text-slate-400">No Image</span>
+                          </div>
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px]" />
                           )}
                         </div>
 
-                        <div className="px-2.5 py-2">
-                          <p className="text-xs sm:text-sm font-medium text-slate-700 line-clamp-2 leading-snug">
+                        <div className="px-2 pt-1.5 pb-2">
+                          <p className="text-[11px] sm:text-xs font-semibold text-slate-700 line-clamp-1 leading-snug mb-0.5">
                             {product?.product?.name}
                           </p>
                           {product?.product?.sale_price != null && (
-                            <p className="text-[11px] sm:text-xs font-semibold text-indigo-600 mt-0.5">
-                              {currency}{Number(product.product.sale_price).toFixed(2)}
-                            </p>
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-[12px] sm:text-[13px] font-bold text-indigo-600 tabular-nums">
+                                {currency}{Number(product.product.sale_price).toFixed(2)}
+                              </p>
+                              {inCart && !isMaxed && (
+                                <span className="text-[9px] font-semibold text-indigo-500 bg-indigo-50 px-1 py-0.5 rounded">
+                                  In cart
+                                </span>
+                              )}
+                              {isMaxed && (
+                                <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 px-1 py-0.5 rounded">
+                                  Max
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -551,51 +578,68 @@ const handleFormSubmit = async (formValues) => {
             )}
 
             {/* Pagination */}
-            {productsData?.length > 0 && (
-              <div className="flex justify-center items-center flex-wrap gap-1.5 pt-2">
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-1 pt-3 pb-1">
+                {/* First page */}
                 <button
                   type="button"
                   onClick={handleFirstPage}
                   disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="First page"
                 >
-                  <ChevronsLeft size={16} />
+                  <ChevronsLeft size={14} />
                 </button>
+
+                {/* Previous page */}
                 <button
                   type="button"
                   onClick={handlePreviousPage}
                   disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Previous page"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} />
                 </button>
-                {getPageNumbers().map((pageNum) => (
-                  <button
-                    type="button"
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-                      currentPage === pageNum ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
+
+                {/* Page numbers */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((pageNum) => (
+                    <button
+                      type="button"
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-md text-xs font-semibold border transition-colors shadow-sm ${
+                        currentPage === pageNum
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-indigo-200"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Next page */}
                 <button
                   type="button"
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Next page"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={14} />
                 </button>
+
+                {/* Last page */}
                 <button
                   type="button"
                   onClick={handleLastPage}
                   disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Last page"
                 >
-                  <ChevronsRight size={16} />
+                  <ChevronsRight size={14} />
                 </button>
               </div>
             )}
@@ -812,6 +856,8 @@ const handleFormSubmit = async (formValues) => {
                 currency={currency}
                 paidAmount={watch("paid_amount")}
                 isLoading={isLoading}
+                setValue={setValue}
+                watch={watch}
               />
             )}
 
