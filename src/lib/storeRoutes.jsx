@@ -4,7 +4,7 @@ import {
   BsCalculatorFill,
   BsFillGearFill,
   BsTools,
-  BsUpcScan, // Added for Barcode
+  BsUpcScan,
 } from "react-icons/bs";
 import {
   FaUsers,
@@ -12,14 +12,14 @@ import {
   FaTelegramPlane,
   FaFileInvoice,
   FaTag,
-  FaShoppingBasket, // Added for Purchases
-  FaPiggyBank, // Added for Loan Management
-  FaBuilding, // Added for Authorities
-  FaPeopleCarry, // Added for Suppliers
-  FaUserCog, // Added for Employees main
-  FaWarehouse, // Added for Inventory
-  FaCouch, // Added for Asset Management
-  FaFileInvoiceDollar, // Added for Balance Sheet
+  FaShoppingBasket,
+  FaPiggyBank,
+  FaBuilding,
+  FaPeopleCarry,
+  FaUserCog,
+  FaWarehouse,
+  FaCouch,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 import {
   BiTransfer,
@@ -32,9 +32,9 @@ import {
   MdAccountBalanceWallet,
   MdOutlineBusinessCenter,
   MdOutlineSettingsApplications,
-  MdPointOfSale, // Added for POS
-  MdHistory, // Added for Transaction History
-  MdOutlineInventory, // Added for View Inventory
+  MdPointOfSale,
+  MdHistory,
+  MdOutlineInventory,
 } from "react-icons/md";
 import { GiSettingsKnobs } from "react-icons/gi";
 import {
@@ -62,10 +62,10 @@ import {
   FiShoppingBag,
   FiTrendingUp,
   FiUsers,
-  FiRotateCcw, // Added for Return List
-  FiSliders, // Added for Adjustments
-  FiDatabase, // Added for Departments
-  FiRepeat, // Added for Transactions
+  FiRotateCcw,
+  FiSliders,
+  FiDatabase,
+  FiRepeat,
 } from "react-icons/fi";
 import { CiReceipt, CiSettings } from "react-icons/ci";
 
@@ -149,7 +149,7 @@ const getSidebarStoreRoutes = () => {
     },
 
       {
-      icon: <BsCalculatorFill />, // Main Expense icon replaced to match image
+      icon: <BsCalculatorFill />,
       title: "Expense",
       path: "",
       content: true,
@@ -157,21 +157,21 @@ const getSidebarStoreRoutes = () => {
       access: hasStorePermission("READ_EXPENSE"),
       subCategory: [
         {
-          icon: <FaTag />, // Categories icon replaced with solid tag to match image
+          icon: <FaTag />,
           title: "Categories",
           path: "/expense-category",
           access: hasStorePermission("READ_EXPENSE_CATEGORY"),
           // access: true,
         },
         {
-          icon: <DiGitBranch />, // Sub Categories icon replaced with branch to match image
+          icon: <DiGitBranch />, 
           title: "Sub Categories",
           path: "/expense-sub-category",
           access: hasStorePermission("READ_EXPENSE_SUB_CATEGORY"),
           // access: true,
         },
         {
-          icon: <AiOutlineBars />, // Expenses List icon replaced with bullet list to match image
+          icon: <AiOutlineBars />,
           title: "Expenses List",
           path: "/expenses",
           access: hasStorePermission("READ_EXPENSE"),
@@ -180,33 +180,33 @@ const getSidebarStoreRoutes = () => {
       ],
     },
 
-        {
-      icon: <FiBox />, // Updated Products boxes icon
+    {
+      icon: <FiBox />,
       title: "Products",
       path: "",
       content: true,
       access: hasStorePermission("READ_PRODUCT"),
       subCategory: [
         {
-          icon: <FaTag />, // Updated Category icon
+          icon: <FaTag />,
           title: "Categories",
           path: "/category",
           access: hasStorePermission("READ_CATEGORY"),
         },
         {
-          icon: <DiGitBranch />, // Updated Sub Categories branch icon
+          icon: <DiGitBranch />,
           title: "Sub Categories",
           path: "/sub-category",
           access: hasStorePermission("READ_SUB_CATEGORY"),
         },
         {
-          icon: <FiList />, // Updated Product List icon
-          title: "Products List", // Renamed to match image
+          icon: <FiList />,
+          title: "Products List",
           path: "/product",
           access: hasStorePermission("READ_PRODUCT"),
         },
         {
-          icon: <BsUpcScan />, // Added Barcode entry
+          icon: <BsUpcScan />,
           title: "Barcode",
           path: "/barcode",
           access: hasStorePermission("READ_PRODUCT"),
@@ -215,20 +215,20 @@ const getSidebarStoreRoutes = () => {
     },
 
     {
-      icon: <FaWarehouse />, // Updated Inventory warehouse icon
+      icon: <FaWarehouse />,
       title: "Inventory",
       path: "",
       content: true,
       access: hasStorePermission("READ_PRODUCT"),
       subCategory: [
         {
-          icon: <MdOutlineInventory />, // Updated View Inventory shelf icon
+          icon: <MdOutlineInventory />,
           title: "View Inventory",
           path: "/view-inventory",
           access: hasStorePermission("READ_PRODUCT"),
         },
         {
-          icon: <FiSliders />, // Updated Inventory Adjustment sliders icon
+          icon: <FiSliders />,
           title: "Inventory Adjustment",
           path: "/inventory-adjustment",
           access: hasStorePermission("READ_PRODUCT"),
@@ -238,32 +238,32 @@ const getSidebarStoreRoutes = () => {
 
     
     {
-      icon: <FiBook />, // Updated Cash Book icon
+      icon: <FiBook />,
       title: "Cash Book",
       path: "",
       content: true,
       access: hasStorePermission("READ_ACCOUNT"),
       subCategory: [
         {
-          icon: <FiGrid />, // Updated Accounts grid icon
-          title: "Accounts", // Renamed to match image
+          icon: <FiGrid />,
+          title: "Accounts",
           path: "/account",
           access: hasStorePermission("READ_ACCOUNT"),
         },
         {
-          icon: <FiSliders />, // Updated Adjustments icon
+          icon: <FiSliders />,
           title: "Balance Adjustments",
           path: "/balance-adjustments",
           access: hasStorePermission("READ_BALANCE_ADJUSTMENT"),
         },
         {
-          icon: <BiTransfer />, // Updated Transfers icon
+          icon: <BiTransfer />,
           title: "Balance Transfers",
           path: "/balance-transfers",
           access: hasStorePermission("READ_BALANCE_TRANSFER"),
         },
         {
-          icon: <MdHistory />, // Updated History icon
+          icon: <MdHistory />,
           title: "Transaction History",
           path: "/account-transactions",
           access: hasStorePermission("READ_ACCOUNT_TRANSACTION"),
@@ -272,7 +272,7 @@ const getSidebarStoreRoutes = () => {
     },
 
     {
-      icon: <CiReceipt />, // Updated Payments main icon
+      icon: <CiReceipt />,
       title: "Payments",
       path: "",
       content: true,
@@ -307,27 +307,27 @@ const getSidebarStoreRoutes = () => {
 
 
     {
-      icon: <FaPiggyBank />, // Updated Loan Management icon
+      icon: <FaPiggyBank />, 
       title: "Loan Management",
       path: "",
       content: true,
       access: hasStorePermission("READ_LOAN"),
       subCategory: [
         {
-          icon: <FaBuilding />, // Updated Authorities icon
+          icon: <FaBuilding />,
           title: "Authorities",
           path: "/loan-authority",
           access: hasStorePermission("READ_LOAN_AUTHORITY"),
         },
         {
-          icon: <FiList />, // Updated Loans icon
+          icon: <FiList />,
           title: "Loans",
           path: "/loans",
           access: hasStorePermission("READ_LOAN"),
         },
         {
-          icon: <CiReceipt />, // Updated Payments receipt icon
-          title: "Payments", // Cleaned title up to match image
+          icon: <CiReceipt />, 
+          title: "Payments",
           path: "/loan-payments",
           access: hasStorePermission("READ_LOAN_PAYMENT"),
         },
@@ -335,20 +335,20 @@ const getSidebarStoreRoutes = () => {
     },
 
     {
-      icon: <FaCouch />, // Updated Asset Management icon
+      icon: <FaCouch />,
       title: "Asset Management",
       path: "",
       content: true,
       access: hasStorePermission("READ_ASSET_TYPES"),
       subCategory: [
         {
-          icon: <FaTag />, // Updated Types icon
+          icon: <FaTag />, 
           title: "Types",
           path: "/asset-types",
           access: hasStorePermission("READ_ASSET_TYPES"),
         },
         {
-          icon: <FiList />, // Updated Assets icon
+          icon: <FiList />, 
           title: "Assets",
           path: "/assets",
           access: hasStorePermission("READ_ASSET"),
@@ -357,46 +357,46 @@ const getSidebarStoreRoutes = () => {
     },
 
     {
-      icon: <FiClipboard />, // Updated Payroll clipboard icon
+      icon: <FiClipboard />,
       title: "Payroll",
       path: "/payroll",
       access: hasStorePermission("READ_PAYROLL"),
     },
     {
-      icon: <FiUsers />, // Updated Clients people icon
+      icon: <FiUsers />,
       title: "Clients",
       path: "/clients",
       access: hasStorePermission("READ_CLIENT"),
     },
     {
-      icon: <FaPeopleCarry />, // Updated Suppliers handling box icon
+      icon: <FaPeopleCarry />,
       title: "Suppliers",
       path: "/suppliers",
       access: hasStorePermission("READ_SUPPLIER"),
     },
 
     {
-      icon: <FaUserCog />, // Updated Employees gear/people icon
+      icon: <FaUserCog />,
       title: "Employees",
       path: "",
       content: true,
       access: hasStorePermission("READ_EMPLOYEE"),
       subCategory: [
         {
-          icon: <FiDatabase />, // Updated Departments server icon
+          icon: <FiDatabase />,
           title: "Departments",
           path: "/departments",
           access: hasStorePermission("READ_DEPARTMENT"),
         },
         {
-          icon: <FiList />, // Updated Employees list icon
-          title: "Employees List", // Renamed to match image
+          icon: <FiList />,
+          title: "Employees List",
           path: "/employees",
           access: hasStorePermission("READ_EMPLOYEE"),
         },
         {
-          icon: <FiList />, // Updated Increments list icon
-          title: "Increments", // Renamed to match image
+          icon: <FiList />,
+          title: "Increments", 
           path: "/salary-increments",
           access: hasStorePermission("READ_SALARY_INCREMENTS"),
         },
@@ -470,13 +470,13 @@ const getSidebarStoreRoutes = () => {
     //   ],
     // },
     {
-      icon: <FaFileInvoiceDollar />, // Updated Balance Sheet document $ icon
+      icon: <FaFileInvoiceDollar />,
       title: "Balance Sheet",
       path: "/balance-sheet",
       access: true,
     },
     {
-      icon: <HiOutlineDocumentReport />, // Updated Summary Report icon
+      icon: <HiOutlineDocumentReport />, 
       title: "Summary Report",
       path: "/summary-report",
       access: true,
@@ -488,19 +488,19 @@ const getSidebarStoreRoutes = () => {
       access: true,
     },
     {
-      icon: <FiPieChart />, // Updated Expense Report pie chart icon
+      icon: <FiPieChart />,
       title: "Expense Report",
       path: "/expense-report",
       access: true,
     },
     {
-      icon: <FiBarChart2 />, // Added Item Report bar chart from image
+      icon: <FiBarChart2 />,
       title: "Item Report",
       path: "/item-report",
       access: true,
     },
     {
-      icon: <FiPieChart />, // Updated Inventory Report pie chart icon
+      icon: <FiPieChart />, 
       title: "Inventory Report",
       path: "/inventory-report",
       access: true,

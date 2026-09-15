@@ -6,12 +6,14 @@ import {
 
 const SETUP_ACCENTS = {
   sky: { grad: "from-sky-500 to-blue-600", ring: "ring-sky-100" },
+  indigo: { grad: "from-indigo-500 to-blue-600", ring: "ring-indigo-100" },
   teal: { grad: "from-teal-500 to-emerald-600", ring: "ring-teal-100" },
   violet: { grad: "from-violet-500 to-indigo-600", ring: "ring-violet-100" },
   rose: { grad: "from-rose-500 to-pink-600", ring: "ring-rose-100" },
   emerald: { grad: "from-emerald-500 to-green-600", ring: "ring-emerald-100" },
   fuchsia: { grad: "from-fuchsia-500 to-purple-600", ring: "ring-fuchsia-100" },
   amber: { grad: "from-amber-500 to-orange-600", ring: "ring-amber-100" },
+  cyan: { grad: "from-cyan-500 to-sky-600", ring: "ring-cyan-100" },
 };
 
 const SETUP_ITEMS = [
@@ -24,12 +26,20 @@ const SETUP_ITEMS = [
     to: "/store/dashboard/branches",
   },
   {
-    title: "General",
-    description: "General settings such as site title, site description, address and so on.",
+    title: "Store Settings",
+    description: "Manage your store's profile, including name, contact details, address and logo.",
     icon: Settings,
     accent: "sky",
-    linkLabel: "Change Setting",
+    linkLabel: "Store Settings",
     to: "/store/dashboard/store-settings",
+  },
+  {
+    title: "System Settings",
+    description: "Configure system-wide preferences such as currency, copyright text and favicon.",
+    icon: Settings,
+    accent: "cyan",
+    linkLabel: "System Settings",
+    to: "/store/dashboard/system-settings",
   },
   {
     title: "Role & Permissions",
