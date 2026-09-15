@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-CF72uaaz.js";import{t as n}from"./ProductsForm-OO-yhy6q.js";e();var r=t(),i=()=>(0,r.jsx)(`div`,{children:(0,r.jsx)(n,{})});export{i as default};

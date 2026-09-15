@@ -11,7 +11,7 @@ const POSModal = ({ setShowModalAfterSubmit, register, errors, control, paymentO
                     <div className="flex justify-between items-center mb-4">
                         <h1 className="text-xl font-bold">Add Payment</h1>
                         <button
-
+                            type="button"
                             className="text-red-500"
                             onClick={() => setShowModalAfterSubmit(false)}
                         >

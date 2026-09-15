@@ -17,7 +17,14 @@ export const stockProductsApi = apiSlice.injectEndpoints({
         tax_id = "",
         branch_id = "",
         store_id = "",
-      }) => `stock-product/pagination?page=${page}&limit=${limit}&order=${order}&search=${search}&store_id=${store_id}`,
+        category_id = "",
+        sub_category_id = "",
+      }) =>
+        `stock-product/pagination?page=${page}&limit=${limit}&order=${order}&search=${encodeURIComponent(
+          search
+        )}&store_id=${store_id}${category_id ? `&category_id=${category_id}` : ""}${
+          sub_category_id ? `&sub_category_id=${sub_category_id}` : ""
+        }`,
       providesTags: ["stockProducts"],
     }),
 

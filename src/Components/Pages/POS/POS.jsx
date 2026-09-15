@@ -1,5 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, MinusCircle, PlusCircle, Minus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ShoppingCart,
+  ImageOff,
+  Loader2,
+  AlertTriangle,
+  RotateCcw,
+  Save,
+  CreditCard,
+} from "lucide-react";
 import { Card, CardContent } from "@/Components/ui/card";
 import { useGetStockProductsByPaginationQuery } from "../../../store/api/app/StockProduct/stockProductApiSlice";
 import { useGetCategoriesByPaginationQuery } from "../../../store/api/app/Category/categoryApiSlice";
@@ -16,79 +32,81 @@ import { useGetAccountsQuery } from "../../../store/api/app/Account/accountApiSl
 import { useGetBranchesQuery } from "../../../store/api/app/Branch/branchApiSlice";
 import { useGetStoreCurrenciesQuery } from "../../../store/api/app/Currency/currenciesApiSlice";
 import POSModal from "../../Shared/Modal/POSModal";
-import { set } from "date-fns";
 import ClientCreateModal from "./ClientCreateModal";
 
+const DEBOUNCE_MS = 400;
+
 const POS = ({ id, data }) => {
-  const { register, unregister, control, errors, reset, handleSubmit, onSubmit, setValue, watch, isLoading } = useSubmit(
+  const { register, control, errors, handleSubmit, onSubmit, watch, reset, isLoading } = useSubmit(
     id,
-    id ? useUpdateInvoicesMutation : useCreateInvoicesMutation, '/store/dashboard/POS'
+    id ? useUpdateInvoicesMutation : useCreateInvoicesMutation,
+    "/store/dashboard/POS"
   );
   const { data: storeCurrency } = useGetStoreCurrenciesQuery();
 
-  const [selectedClient, setSelectedClient] = useState("");
-  const [discountType, setDiscountType] = useState("fixed");
   const backendUrl = import.meta.env.VITE_LOCAL_API_URL;
-   const [tableData, setTableData] = useState([]);
+  const [tableData, setTableData] = useState([]);
   const [showModalAfterSubmit, setShowModalAfterSubmit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [showClientModal, setShowClientModal] = useState(false);
 
+  // Search: raw input vs debounced value actually sent to the API
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const searchDebounceRef = useRef(null);
 
   // Pagination State
   const [paginationPage, setPaginationPage] = useState(1);
-  const [pageCount, setPageCount] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [order, setOrder] = useState("desc");
-  const [search, setSearch] = useState("");
-  //Get Auth
-  const { isAuth, auth } = useSelector((state) => state.auth);
+  const [limit] = useState(12);
+  const [order] = useState("desc");
+
+  // Get Auth
+  const { auth } = useSelector((state) => state.auth);
   const { store_id } = auth.user;
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [searchInput]);
+
   const {
     data: stockProduct,
-    isLoading: isStockLoading,
-    isError,
-    error,
-    refetch: refetchStockProducts,
+    isFetching: isStockFetching,
+    isError: isStockError,
+    error: stockError,
   } = useGetStockProductsByPaginationQuery({
     page: paginationPage,
-    limit: limit,
-    order: order,
-    search: search,
+    limit,
+    order,
+    search,
     category_id: selectedCategory || undefined,
     sub_category_id: selectedSubCategory || undefined,
-    store_id: store_id,
+    store_id,
   });
 
   const { data: categories } = useGetCategoriesByPaginationQuery({
     page: 1,
     limit: 100,
-    store_id: store_id,
+    store_id,
   });
 
   const { data: subCategories } = useGetSubCategoriesByPaginationQuery({
     page: 1,
     limit: 100,
-    store_id: store_id,
+    store_id,
   });
 
-  const { data: taxs } = useGetTaxsQuery({
-    store_id: store_id,
-  });
+  const { data: taxs } = useGetTaxsQuery({ store_id });
 
-  const { data: clients, refetch: refetchClients } = useGetClientsQuery({
-    store_id: store_id,
-  });
+  const { data: clients, refetch: refetchClients } = useGetClientsQuery({ store_id });
 
-  const [showClientModal, setShowClientModal] = useState(false);
+  const { data: accounts } = useGetAccountsQuery({ store_id });
 
-  const { data: accounts } = useGetAccountsQuery({
-    store_id: store_id,
-  });
-
-  const { data: branch } = useGetBranchesQuery({
-    store_id: store_id,
-  });
+  const { data: branch } = useGetBranchesQuery({ store_id });
 
   const discount_type = watch("discount_type");
   const discount = watch("discount");
@@ -105,201 +123,224 @@ const POS = ({ id, data }) => {
   const productsData = stockProduct?.data?.result;
   const paginationData = stockProduct?.data?.pagination;
 
+  const totalPages = paginationData?.total_page || 1;
+  const currentPage = paginationData?.current_page || 1;
 
-  // Pagination configuration
-  const itemsPerPage = paginationData?.page_limit;
-  const totalPages = paginationData?.total_page;
-  const currentPage = paginationData?.current_page;
-
-  // Pagination handlers
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPaginationPage(newPage);
-    }
-  };
-
-  const handleFirstPage = () => {
+  // Reset to page 1 whenever a filter changes (not on page navigation itself)
+  useEffect(() => {
     setPaginationPage(1);
-  };
-
-  const handleLastPage = () => {
-    setPaginationPage(totalPages);
-  };
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setPaginationPage((prev) => prev - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setPaginationPage((prev) => prev + 1);
-    }
-  };
-
-    useEffect(() => {
-    setPaginationPage(1);
-    refetchStockProducts();
   }, [selectedCategory, selectedSubCategory, search]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) setPaginationPage(newPage);
+  };
+  const handleFirstPage = () => setPaginationPage(1);
+  const handleLastPage = () => setPaginationPage(totalPages);
+  const handlePreviousPage = () => currentPage > 1 && setPaginationPage((p) => p - 1);
+  const handleNextPage = () => currentPage < totalPages && setPaginationPage((p) => p + 1);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    for (let i = startPage; i <= endPage; i++) pages.push(i);
+    return pages;
+  };
+
+  // ---- Cart logic -----------------------------------------------------
+  // Cart is keyed by product.id (the stock-product row id), never by grid
+  // render index, so adding/updating always targets the correct cart row
+  // even after pagination/search/category changes reorder the grid.
+  const addToCart = (product) => {
+    const stock = Number(product?.stock_quantity || 0);
+    if (stock <= 0) {
+      toast.error("This product is out of stock!");
+      return;
+    }
+    setTableData((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === product.id);
+      if (existingIndex !== -1) {
+        const existing = prev[existingIndex];
+        if (existing.getQuantity >= stock) {
+          setTimeout(() => toast.error(`Only ${stock} in stock!`), 0);
+          return prev;
+        }
+        const next = [...prev];
+        next[existingIndex] = { ...existing, getQuantity: existing.getQuantity + 1 };
+        return next;
+      }
+      return [...prev, { ...product, getQuantity: 1 }];
+    });
+  };
+
+  const updateQuantityByStep = (productId, increment) => {
+    setTableData((prev) => {
+      const idx = prev.findIndex((item) => item.id === productId);
+      if (idx === -1) return prev;
+      const current = prev[idx];
+      const stock = Number(current.stock_quantity || 0);
+      const newQuantity = Math.max(1, current.getQuantity + increment);
+      if (newQuantity > stock) {
+        setTimeout(() => toast.error("Quantity exceeds available stock!"), 0);
+        return prev;
+      }
+      const next = [...prev];
+      next[idx] = { ...current, getQuantity: newQuantity };
+      return next;
+    });
+  };
+
+  const updateQuantityByInput = (productId, rawValue) => {
+    setTableData((prev) => {
+      const idx = prev.findIndex((item) => item.id === productId);
+      if (idx === -1) return prev;
+      const current = prev[idx];
+      const stock = Number(current.stock_quantity || 0);
+
+      // Guard against "", non-numeric, negative, or 0 input turning into NaN downstream
+      const parsed = Number(rawValue);
+      const safeValue = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+
+      if (safeValue > stock) {
+        setTimeout(() => toast.error(`Available stock ${stock}!`), 0);
+        const next = [...prev];
+        next[idx] = { ...current, getQuantity: stock || 1 };
+        return next;
+      }
+
+      const next = [...prev];
+      next[idx] = { ...current, getQuantity: safeValue };
+      return next;
+    });
+  };
+
+  const removeFromCart = (productId) => {
+    setTableData((prev) => prev.filter((item) => item.id !== productId));
+  };
+
+  const calculateTotal = () => {
+    const subtotal = tableData?.reduce((sum, item) => sum + item.product.sale_price * item.getQuantity, 0) || 0;
+
+    let taxCost = 0;
+    if (tax_id) {
+      const taxDetail = taxs?.data?.find((t) => t?.id === tax_id);
+      taxCost = taxDetail ? (subtotal * (Number(taxDetail.rate) || 0)) / 100 : 0;
+    }
+
+    const discountAmount =
+      discount_type === "FLAT" ? Number(discount) || 0 : (subtotal * (Number(discount) || 0)) / 100;
+    const transportCost = Number(transport) || 0;
+    const netTotal = Math.max(0, subtotal - discountAmount + transportCost + taxCost);
+
+    return {
+      subtotal,
+      taxCost: Number(taxCost.toFixed(2)),
+      discountAmount: Number(discountAmount.toFixed(2)),
+      netTotal: Number(netTotal.toFixed(2)),
+    };
+  };
+
+  const totals = calculateTotal();
+
+  const discountOptions = [
+    { value: "FLAT", label: "FLAT" },
+    { value: "PERCENTAGE", label: "PERCENTAGE" },
+  ];
+
+  const cartItemCount = useMemo(
+    () => tableData.reduce((sum, item) => sum + item.getQuantity, 0),
+    [tableData]
+  );
 
   const handleSavePayment = () => {
     if (!client_id) {
       toast.error("Please select a client!");
       return;
     }
+    if (tableData.length === 0) {
+      toast.error("Please add at least one product!");
+      return;
+    }
     setShowModalAfterSubmit(true);
   };
 
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    let pages = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  const handleReset = () => {
+    if (tableData.length === 0 && !client_id) {
+      return; // nothing to reset
+    }
+    const confirmed = window.confirm("This will clear the cart and all entered fields. Continue?");
+    if (!confirmed) return;
 
-    // Adjust start page if we're near the end
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    setTableData([]);
+    setShowModalAfterSubmit(false);
+    setSelectedCategory("");
+    setSelectedSubCategory("");
+    setSearchInput("");
+    setSearch("");
+    setPaginationPage(1);
+    reset(); // clears branch, client, discount, transport, tax and all other form fields
+    toast.success("Form has been reset");
+  };
+
+  const handleFormSubmit = async (formValues) => {
+    if (tableData.length === 0) {
+      toast.error("Please add at least one product!");
+      return;
+    }
+    if (!formValues.client_id) {
+      toast.error("Please select a client!");
+      return;
     }
 
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    return pages;
-  };
+    const { payment_options, ...rest } = formValues;
 
-  //Selected Product Controller
-  const allTableData = (index, product) => {
-    setTableData((prev) => {
-      const newData = [...prev];
+    const productsPayload = tableData.map((item) => ({
+      quantity: item.getQuantity,
+      sale_price: item.product.sale_price,
+      product_id: item.product.id,
+    }));
 
-      // Find if the product already exists (assume 'id' is the unique key)
-      const existingProductIndex = newData.findIndex((item) => item.id === product.id);
-
-      if (existingProductIndex !== -1) {
-        // If product exists, update its stock_quantity
-        newData[existingProductIndex] = {
-          ...newData[existingProductIndex],
-          getQuantity: newData[existingProductIndex].getQuantity + 1,
-        };
-      } else {
-        // If product does not exist, add it to the array with stock_quantity set to 1
-        newData.push({
-          ...product,
-          getQuantity: 1, // Initialize stock_quantity to 1
-        });
-      }
-
-      return newData;
-    });
-  };
-
-  const updateQuantity = (index, increment, product_id) => {
-    setTableData((prev) => {
-      const newData = [...prev];
-      const currentProduct = newData[index];
-      const newQuantity = Math.max(1, currentProduct.getQuantity + increment);
-
-      if (newQuantity > currentProduct.stock_quantity) {
-        // Avoid triggering `toast` during render or state update logic
-        setTimeout(() => toast.error("Quantity exceeds available stock!"), 0);
-        return prev; // No change to state
-      }
-
-      newData[index] = {
-        ...currentProduct,
-        getQuantity: newQuantity,
-      };
-
-      return newData;
-    });
-  };
-
-  const updateInputQuantity = (index, increment, product_id) => {
-    setTableData((prev) => {
-      const newData = [...prev];
-      const currentProduct = newData[index];
-      const newQuantity = Math.max(1, increment);
-
-      if (newQuantity > currentProduct.stock_quantity) {
-        // Avoid triggering `toast` during render or state update logic
-        setTimeout(() => toast.error(`Available stock ${currentProduct.stock_quantity}!`), 0);
-        return prev; // No change to state
-      }
-
-      newData[index] = {
-        ...currentProduct,
-        getQuantity: newQuantity,
-      };
-
-      return newData;
-    });
-  };
-
-  // Left Table Handler
-
-  const removeFromCart = (productId) => {
-    setTableData(tableData?.filter((item) => item.id !== productId));
-  };
-
-  const calculateTotal = () => {
-    const subtotal = tableData?.reduce((sum, item) => sum + item.product.sale_price * item.getQuantity, 0);
-    // Apply tax
-    let taxCost = 0;
-    if (tax_id) {
-      const taxDetail = taxs?.data?.find((taxId) => taxId?.id === tax_id);
-      console.log("taxDetail", taxDetail);
-      taxCost = taxDetail ? (subtotal * (Number(taxDetail.rate) || 0)) / 100 : 0;
-    }
-
-    const discountAmount = discount_type === "FLAT" ? Number(discount) || 0 : (subtotal * (Number(discount) || 0)) / 100;
-    const transportCost = Number(transport) || 0;
-    const netTotal = (subtotal - discountAmount + transportCost + taxCost).toFixed(2);
-    return { subtotal, taxCost, netTotal };
-  };
-  const discountOptions = [
-    {
-      value: "FLAT",
-      label: "FLAT",
-    },
-    {
-      value: "PERCENTAGE",
-      label: "PERCENTAGE",
-    },
-  ];
-  const TableData = tableData.map((item) => ({
-    quantity: item.getQuantity,
-    sale_price: item.product.sale_price,
-    product_id: item.product.id,
-  }));
-  const handleFormSubmit = async (data) => {
-    const { payment_options, ...rest } = data;
     const finalData = {
       ...rest,
-      products: TableData,
-      discount: Number(data?.discount),
-      transport: Number(data?.transport),
-      invoice_date: new Date(`${data?.invoice_date}:00Z`).toISOString(),
+      products: productsPayload,
+      discount: Number(formValues?.discount) || 0,
+      transport: Number(formValues?.transport) || 0,
+      subtotal: totals.subtotal,
+      tax_amount: totals.taxCost,
+      net_total: totals.netTotal,
+      invoice_date: formValues?.invoice_date
+        ? new Date(`${formValues.invoice_date}:00Z`).toISOString()
+        : new Date().toISOString(),
       ...(payment_options && {
         payment: {
-          amount: parseInt(data?.paid_amount),
-          cheque_no: data?.cheque_no,
-          receipt_no: data?.receipt_no,
-          transaction_date: new Date(`${data?.invoice_date}:00Z`).toISOString(),
-          account_id: data?.account_id,
+          amount: parseInt(formValues?.paid_amount, 10) || 0,
+          cheque_no: formValues?.cheque_no,
+          receipt_no: formValues?.receipt_no,
+          transaction_date: formValues?.invoice_date
+            ? new Date(`${formValues.invoice_date}:00Z`).toISOString()
+            : new Date().toISOString(),
+          account_id: formValues?.account_id,
         },
       }),
     };
-    // Combine form data with products list
-    console.log("submitData:: ", finalData);
-    setTableData([]);
-    setSelectedClient("");
-    setShowModalAfterSubmit(false);
-    await onSubmit(finalData);
-  };
 
-  // console.log(TableData);
+    try {
+      await onSubmit(finalData);
+      // Only clear the cart/UI state once the submit hook has resolved
+      // (it internally toasts + navigates on success and toasts on error;
+      // clearing here regardless would wipe a cart the user still needs
+      // to retry after a failed submission).
+      setTableData([]);
+      setShowModalAfterSubmit(false);
+    } catch (err) {
+      // useSubmit already surfaces the error toast; keep cart intact so
+      // the user can correct the form and retry without re-adding items.
+    }
+  };
 
   return (
     <div className="w-full">
@@ -307,152 +348,225 @@ const POS = ({ id, data }) => {
         onSubmit={handleSubmit(handleFormSubmit)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-            e.preventDefault(); // Prevent form submission on Enter
+            e.preventDefault();
           }
         }}
       >
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 lg:gap-5">
-          {/* Right Side - Products */}
-                    <div className="space-y-4 xl:order-last xl:col-span-3 bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
-            <div className="grid grid-cols-2 gap-3">
+          {/* Products */}
+          <div className="space-y-4 xl:order-last xl:col-span-3 bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
                 value={selectedCategory}
-                onChange={(e) => { setSelectedCategory(e.target.value ? Number(e.target.value) : ""); setSelectedSubCategory(""); }}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value ? Number(e.target.value) : "");
+                  setSelectedSubCategory("");
+                }}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="">Select a category</option>
                 {categories?.data?.result?.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
                 ))}
               </select>
               <select
                 value={selectedSubCategory}
-                onChange={(e) => setSelectedSubCategory(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                onChange={(e) => setSelectedSubCategory(e.target.value ? Number(e.target.value) : "")}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
               >
                 <option value="">Select a subcategory</option>
                 {subCategories?.data?.result
-                  ?.filter((sub) => !selectedCategory || sub.category_id === selectedCategory || sub.category?.id === selectedCategory)
+                  ?.filter(
+                    (sub) =>
+                      !selectedCategory ||
+                      sub.category_id === selectedCategory ||
+                      sub.category?.id === selectedCategory
+                  )
                   ?.map((sub) => (
-                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
                   ))}
               </select>
             </div>
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
               <input
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search products by name..."
                 className="w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
+              {isStockFetching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 animate-spin" size={16} />
+              )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
-              {productsData?.map((product, index) => {
-                // Find matching item from tableData
-                const matched = tableData?.find(
-                  (item) => item?.id === product?.id || item?.product_id === product?.product_id
-                );
 
-                // Check if it should be disabled
-                const isDisabled =
-                  Number(product?.stock_quantity || 0) <= 0 ||
-                  (matched && Number(matched?.getQuantity || 0) >= Number(product?.stock_quantity || 0));
+            {/* Error state */}
+            {isStockError && (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                <AlertTriangle size={16} className="shrink-0" />
+                <span>{stockError?.data?.message || "Failed to load products. Please try again."}</span>
+              </div>
+            )}
 
-                return (
-                  <Card
-                    key={product.id}
-                    className={`relative overflow-hidden rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ${isDisabled ? "opacity-50 pointer-events-none" : "cursor-pointer"
+            {/* Loading skeleton */}
+            {isStockFetching && !productsData && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+                    <div className="h-28 sm:h-32 bg-slate-100" />
+                    <div className="h-8 bg-slate-100 mt-1 mx-2 rounded" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!isStockFetching && !isStockError && productsData?.length === 0 && (
+              <div className="flex flex-col items-center justify-center text-center py-12 text-slate-400">
+                <ImageOff size={32} className="mb-2" />
+                <p className="text-sm font-medium">No products found</p>
+                <p className="text-xs">Try a different search term or category</p>
+              </div>
+            )}
+
+            {/* Product grid */}
+            {!isStockError && productsData?.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
+                {productsData.map((product) => {
+                  const matched = tableData.find((item) => item.id === product.id);
+                  const stock = Number(product?.stock_quantity || 0);
+                  const isOutOfStock = stock <= 0;
+                  const isMaxed = matched && Number(matched.getQuantity || 0) >= stock;
+                  const isDisabled = isOutOfStock || isMaxed;
+
+                  return (
+                    <Card
+                      key={product.id}
+                      className={`relative overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ${
+                        isDisabled
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
                       }`}
-                  >
-                    <CardContent
-                      className="p-0 cursor-pointer"
-                      onClick={() => allTableData(index, product)}
                     >
-                      <div className="absolute top-1.5 left-1.5 z-10 bg-red-500 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shadow-sm">
-                        {product?.stock_quantity}
-                      </div>
+                      <CardContent
+                        className="p-0"
+                        onClick={() => !isDisabled && addToCart(product)}
+                      >
+                        <div
+                          className={`absolute top-1.5 left-1.5 z-10 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shadow-sm ${
+                            isOutOfStock ? "bg-slate-400" : "bg-red-500"
+                          }`}
+                        >
+                          {isOutOfStock ? "OUT" : stock}
+                        </div>
 
-                      <div className="h-28 sm:h-32 bg-slate-50 flex items-center justify-center overflow-hidden">
-                        {product?.product?.main_image ? (
-                          <img
-                            className="h-full w-full object-cover"
-                            src={`${backendUrl}${product?.product?.main_image}`}
-                            alt={product?.product?.name}
-                          />
-                        ) : (
-                          <span className="text-xs text-slate-400">No Preview</span>
+                        {matched && (
+                          <div className="absolute top-1.5 right-1.5 z-10 bg-indigo-600 text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold shadow-sm">
+                            {matched.getQuantity}
+                          </div>
                         )}
-                      </div>
 
-                      <div className="px-2.5 py-2 text-xs sm:text-sm font-medium text-slate-700 line-clamp-2 leading-snug">
-                        {product?.product?.name}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-            {/* // Pagination */}
-            <div className="flex justify-center items-center flex-wrap gap-1.5 pt-2">
-              <button
-                onClick={handleFirstPage}
-                disabled={currentPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronsLeft size={16} />
-              </button>
-              <button
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              {getPageNumbers().map((pageNum) => (
+                        <div className="h-28 sm:h-32 bg-slate-50 flex items-center justify-center overflow-hidden">
+                          {product?.product?.main_image ? (
+                            <img
+                              className="h-full w-full object-cover"
+                              src={`${backendUrl}${product.product.main_image}`}
+                              alt={product?.product?.name}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <ImageOff className="text-slate-300" size={24} />
+                          )}
+                        </div>
+
+                        <div className="px-2.5 py-2">
+                          <p className="text-xs sm:text-sm font-medium text-slate-700 line-clamp-2 leading-snug">
+                            {product?.product?.name}
+                          </p>
+                          {product?.product?.sale_price != null && (
+                            <p className="text-[11px] sm:text-xs font-semibold text-indigo-600 mt-0.5">
+                              ৳{Number(product.product.sale_price).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {productsData?.length > 0 && (
+              <div className="flex justify-center items-center flex-wrap gap-1.5 pt-2">
                 <button
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-semibold transition-colors ${currentPage === pageNum ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}
+                  type="button"
+                  onClick={handleFirstPage}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
                 >
-                  {pageNum}
+                  <ChevronsLeft size={16} />
                 </button>
-              ))}
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronRight size={16} />
-              </button>
-              <button
-                onClick={handleLastPage}
-                disabled={currentPage === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronsRight size={16} />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                {getPageNumbers().map((pageNum) => (
+                  <button
+                    type="button"
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                      currentPage === pageNum ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLastPage}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ChevronsRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Left Side - Cart */}
-
+          {/* Cart / Checkout */}
           <div className="space-y-4 xl:col-span-2">
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CustomReactSelect
                   control={control}
                   name="branch_id"
                   label="Branch"
                   placeholder="Select Branch"
-                  options={
-                    branch?.data?.map((item) => ({
-                      value: item.id,
-                      label: item.name,
-                    })) || []
-                  }
+                  options={branch?.data?.map((item) => ({ value: item.id, label: item.name })) || []}
                   required={true}
-                // error={errors.section_type}
                 />
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
@@ -461,16 +575,10 @@ const POS = ({ id, data }) => {
                       name="client_id"
                       label="Client"
                       placeholder="Select Client"
-                      options={
-                        clients?.data?.map((item) => ({
-                          value: item.id,
-                          label: item.name,
-                        })) || []
-                      }
+                      options={clients?.data?.map((item) => ({ value: item.id, label: item.name })) || []}
                       required={true}
                     />
                   </div>
-                  {/* button */}
                   <button
                     type="button"
                     className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
@@ -480,101 +588,127 @@ const POS = ({ id, data }) => {
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
-
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
-                    <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Price</th>
-                    <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Quantity</th>
-                    <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Subtotal</th>
-                    <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {tableData.map((item, index) => {
-                    return (
+              <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-slate-200 bg-slate-50">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <ShoppingCart size={16} />
+                  <span className="text-sm font-semibold">Cart</span>
+                </div>
+                <span className="text-xs font-medium text-slate-500">
+                  {cartItemCount} item{cartItemCount === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px]">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Product
+                      </th>
+                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Price
+                      </th>
+                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Qty
+                      </th>
+                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Subtotal
+                      </th>
+                      <th className="p-2.5 sm:p-3 text-left text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {tableData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="p-3">{item?.product?.name}</td>
-                        <td className="p-3">৳{item?.product.sale_price?.toFixed(2)}</td>
-                        <td className="p-3 flex">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(index, -1, item.id);
-                            }}
-                            disabled={item?.getQuantity <= 1}
-                            className={`w-6 h-6 flex items-center justify-center bg-red-500 text-white rounded-full disabled:opacity-75 ${item?.getQuantity <= 1 ? "cursor-not-allowed" : ""
-                              } `}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <div className="w-20 text-center flex">
+                        <td className="p-3 text-sm text-slate-700 max-w-[140px] truncate" title={item?.product?.name}>
+                          {item?.product?.name}
+                        </td>
+                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">
+                          ৳{Number(item?.product?.sale_price || 0).toFixed(2)}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantityByStep(item.id, -1);
+                              }}
+                              disabled={item.getQuantity <= 1}
+                              className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
                             <input
-                              className="w-16 text-center"
+                              className="w-12 text-center border border-slate-200 rounded-md py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               type="number"
+                              min={1}
+                              max={item.stock_quantity}
                               onChange={(e) => {
                                 e.stopPropagation();
-                                const newValue = Number(e.target.value); // Ensure it's a number
-                                updateInputQuantity(index, newValue, item.id); // Pass the new value and ID
+                                updateQuantityByInput(item.id, e.target.value);
                               }}
-                              value={item?.getQuantity || 1} // Ensure value uses the updated state or defaults to 1
+                              value={item.getQuantity || 1}
                             />
-                          </div>{" "}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantityByStep(item.id, 1);
+                              }}
+                              disabled={item.getQuantity >= item.stock_quantity}
+                              className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-full disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                          ৳{(Number(item?.product?.sale_price || 0) * item.getQuantity).toFixed(2)}
+                        </td>
+                        <td className="p-3">
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(index, 1, item.id);
-                            }}
-                            disabled={item?.getQuantity >= item?.stock_quantity}
-                            className={`w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-full disabled:opacity-75 ${item?.getQuantity >= item?.stock_quantity ? "cursor-not-allowed" : ""
-                              } `}
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-red-500 hover:text-red-600 p-1"
+                            title="Remove"
                           >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </td>
-                        <td className="p-3">৳{(item?.product.sale_price * item?.getQuantity).toFixed(2)}</td>
-                        <td className="p-3">
-                          <button onClick={() => removeFromCart(item.id)} className="text-red-500">
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                         </td>
                       </tr>
-                    );
-                  })}
-                  {tableData.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="p-3 text-center text-gray-500">
-                        No data found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    ))}
+                    {tableData.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-400">
+                          No items in cart. Tap a product to add it.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
               <div className="bg-slate-50 border-t border-slate-200 px-3 py-2.5 text-right">
-                <span className="text-sm font-bold text-slate-700">Sub Total: ৳{calculateTotal()?.subtotal?.toFixed(2)}</span>
+                <span className="text-sm font-bold text-slate-700">Sub Total: ৳{totals.subtotal.toFixed(2)}</span>
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_18px_-12px_rgba(15,23,42,0.18)] p-3 sm:p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CustomReactSelect
                   control={control}
                   name="discount_type"
                   label="Discount Type"
-                  placeholder="Select discount_type"
+                  placeholder="Select discount type"
                   options={discountOptions}
-                // error={errors.section_type}
                 />
-              </div>
-              <div>
                 <TextInput
                   name="discount"
                   label="Discount"
@@ -584,61 +718,97 @@ const POS = ({ id, data }) => {
                   placeholder="Enter Discount"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <TextInput
-                name="transport"
-                label="Transport Cost"
-                type="number"
-                register={register}
-                error={errors.transport}
-                placeholder="Enter transport cost"
-              />
-              <div className="flex justify-stretch items-end ">
-                <CustomReactSelect
-                  control={control}
-                  name="tax_id"
-                  label="Invoice Tax"
-                  placeholder="Select Invoice tax"
-                  options={
-                    taxs?.data?.map((item) => ({
-                      value: item.id,
-                      label: item.name,
-                    })) || []
-                  }
-                  required={true} // Sets the flex basis to 70%
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TextInput
+                  name="transport"
+                  label="Transport Cost"
+                  type="number"
+                  register={register}
+                  error={errors.transport}
+                  placeholder="Enter transport cost"
                 />
+                <div className="flex justify-stretch items-end gap-2">
+                  <div className="flex-[0_0_70%]">
+                    <CustomReactSelect
+                      control={control}
+                      name="tax_id"
+                      label="Invoice Tax"
+                      placeholder="Select Invoice tax"
+                      options={taxs?.data?.map((item) => ({ value: item.id, label: item.name })) || []}
+                      required={true}
+                    />
+                  </div>
+                  <div className="flex-[0_0_25%] p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-right text-sm font-medium text-slate-600 truncate">
+                    {storeCurrency?.data?.currency?.symbol}
+                    {totals.taxCost}
+                  </div>
+                </div>
+              </div>
 
-                <div className="flex-[0_0_25%] p-2 rounded bg-gray-50 text-right">{storeCurrency?.data?.currency?.symbol}{calculateTotal()?.taxCost || 0}</div>
+              <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 rounded-xl shadow-md shadow-indigo-200/60 px-4 py-3.5 flex items-center justify-between">
+                <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full" />
+                <div className="absolute -right-2 -bottom-8 w-20 h-20 bg-white/10 rounded-full" />
+                <span className="relative text-xs sm:text-sm font-medium text-indigo-100 tracking-wide uppercase">
+                  Net Total
+                </span>
+                <span className="relative text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                  ৳{totals.netTotal.toFixed(2)}
+                </span>
               </div>
             </div>
 
-                        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 text-center p-3 rounded-lg shadow-sm">
-              <h3 className="text-base sm:text-lg font-bold text-white">Net Total: ৳{calculateTotal()?.netTotal || 0}</h3>
-            </div>
-            </div>
-
-
             {showModalAfterSubmit && (
-              <POSModal setShowModalAfterSubmit={setShowModalAfterSubmit} register={register} errors={errors} control={control} paymentOptions={paymentOptions} addPaymentOptions={addPaymentOptions} accounts={accounts} calculateTotal={calculateTotal} />
+              <POSModal
+                setShowModalAfterSubmit={setShowModalAfterSubmit}
+                register={register}
+                errors={errors}
+                control={control}
+                paymentOptions={paymentOptions}
+                addPaymentOptions={addPaymentOptions}
+                accounts={accounts}
+                calculateTotal={calculateTotal}
+              />
             )}
 
-
-
-
-                        <div className="grid grid-cols-2 gap-3">
-              <button type="submit" className="bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors" onClick={() => setShowModalAfterSubmit(false)}>
-                Save
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors order-1"
+                onClick={() => setShowModalAfterSubmit(false)}
+              >
+                {isLoading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Save size={15} />
+                )}
+                {isLoading ? "Saving..." : "Save"}
               </button>
-              <button type="button" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors" onClick={handleSavePayment}>
+              <button
+                type="button"
+                disabled={isLoading}
+                className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors order-2"
+                onClick={handleSavePayment}
+              >
+                <CreditCard size={15} />
                 Save & Payment
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                title="Clear cart and reset the form"
+                className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-slate-700 text-xs sm:text-sm font-semibold py-2.5 rounded-lg border border-slate-200 shadow-sm transition-colors order-3"
+                onClick={handleReset}
+              >
+                <RotateCcw size={15} />
+                Reset
               </button>
             </div>
           </div>
         </div>
       </form>
-      {/* Client Create Modal */}
+
       {showClientModal && (
         <ClientCreateModal
           storeId={store_id}
@@ -650,8 +820,6 @@ const POS = ({ id, data }) => {
           }}
         />
       )}
-
-
     </div>
   );
 };
